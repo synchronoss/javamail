@@ -1,0 +1,107 @@
+<project name="ivy-boilerplate" xmlns:ivy="antlib:org.apache.ivy.ant">
+
+    <property name="artifactory.host" value="pansel.qa.laszlosystems.com"/>
+    <property name="artifactory.url" value="http://${artifactory.host}:8080/artifactory"/>
+
+    <!-- If true, dependencies will be resolved only from Ivy's cache -->
+    <property name="offline" value="false"/>
+
+    <property environment="ivyenv."/>
+
+    <!-- For CI builds, ensure isolation by downloading Ivy to the workspace.
+         Otherwise, download it to the user's home directory -->
+    <condition property="ivy.jar.dir"
+               value="${basedir}/target/temp/ivy"
+               else="${user.home}/.ivy2/bin">
+        <isset property="ivyenv.WORKSPACE" />
+    </condition>
+
+    <property name="ivy.install.version" value="2.3.0"/>
+    <property name="ivy.jar.file" value="${ivy.jar.dir}/ivy-${ivy.install.version}.jar"/>
+
+    <property name="ivy.artifact.url"
+              value="${artifactory.url}/ext-release-local/org/apache/ivy/ivy/${ivy.install.version}/ivy-${ivy.install.version}.jar"/>
+
+    <property name="ivy.resolve.cache.dir" location="target/temp/ivy/resolution-cache"/>
+
+    <!--
+    <condition property="ivy.artifact.cache.dir.relative"
+               value="${user.home}/.ivy2/cache-${ivyenv.EXECUTOR_NUMBER}"
+               else="${user.home}/.ivy2/cache">
+        <isset property="ivyenv.WORKSPACE" />
+    </condition>
+        -->
+
+    <condition property="ivy.artifact.cache.dir.relative"
+               value="target/temp/ivy/artifact-cache"
+               else="${user.home}/.ivy2/cache">
+        <isset property="ivyenv.WORKSPACE" />
+    </condition>
+
+    <property name="ivy.artifact.cache.dir" location="${ivy.artifact.cache.dir.relative}"/>
+
+    <target name="ivy:check-installed">
+        <available file="${ivy.jar.file}" type="file" property="skip.ivy.download"/>
+    </target>
+
+    <target name="ivy:install" depends="ivy:check-installed" unless="skip.ivy.download">
+        <mkdir dir="${ivy.jar.dir}"/>
+        <!-- download Ivy from web site so that it can be used even without any special installation -->
+        <echo message="installing ivy..."/>
+        <get src="${ivy.artifact.url}" dest="${ivy.jar.file}" usetimestamp="true"/>
+    </target>
+
+    <target name="ivy:init" depends="ivy:install">
+        <taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant">
+            <classpath path="${ivy.jar.file}"/>
+        </taskdef>
+
+        <echo>ivy.artifact.cache.dir: ${ivy.artifact.cache.dir}</echo>
+        <echo>ivy.resolve.cache.dir: ${ivy.resolve.cache.dir}</echo>
+    </target>
+
+    <target name="ivy:resolve" depends="ivy:init" unless="skip.resolve">
+        <echo>offline mode (useCacheOnly): ${offline}</echo>
+        <ivy:resolve log="default" checkIfChanged="false" useCacheOnly="${offline}"/>
+
+        <!-- <ivy:report todir="target/ivy/report" graph="false"/> -->
+
+        <ivy:retrieve sync="true" type="bundle,jar" pattern="target/lib/[conf]/[artifact]-[revision](-[classifier]).[ext]"/>
+        <ivy:retrieve sync="true" type="source" pattern="target/lib-src/[artifact]-[revision](-[classifier]).[ext]"/>
+    </target>
+
+    <target name="ivy:prepare" depends="ivy:resolve">
+        <property name="ivy.artifact.packaging" value="jar"/>
+
+        <ivy:deliver deliverpattern="target/ivys/${artifactId}-ivy.xml" pubrevision="${version}" status="release"/>
+        <ivy:makepom artifactPackaging="${ivy.artifact.packaging}" ivyfile="target/ivys/${artifactId}-ivy.xml" pomfile="target/poms/${artifactId}.pom"/>
+    </target>
+
+    <target name="ivy:clean" depends="ivy:init">
+        <ivy:cleancache/>
+    </target>
+
+    <target name="resolve" depends="ivy:resolve" description="Download dependencies"/>
+
+    <target name="clean-cache" depends="ivy:clean" description="Purge the artifact cache"/>
+
+    <target name="ivy:check-publish">
+        <fail unless="build.id" message="Must specify 'build.id' property when publishing"/>
+        <fail unless="username" message="Must specify 'username' property when publishing"/>
+        <fail unless="password" message="Must specify 'password' property when publishing"/>
+    </target>
+
+    <target name="publish" depends="ivy:check-publish, clean, artifacts, ivy:prepare"
+            description="Upload artifacts to integration repository">
+        <ivy:publish resolver="integration" pubrevision="${version}" overwrite="true" publishivy="false">
+            <artifacts pattern="target/[type]s/[artifact](-[classifier]).[ext]"/>
+        </ivy:publish>
+    </target>
+
+    <target name="release" depends="ivy:check-publish, clean, artifacts, ivy:prepare"
+            description="Upload artifacts to release repository">
+        <ivy:publish resolver="release" pubrevision="${version}" overwrite="true" publishivy="false">
+            <artifacts pattern="target/[type]s/[artifact](-[classifier]).[ext]"/>
+        </ivy:publish>
+    </target>
+</project>

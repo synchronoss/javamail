@@ -1,0 +1,18 @@
+*** src/main/java/com/sun/mail/pop3/POP3Store.java	2010-06-16 15:21:45.000000000 -0700
+--- src.new/main/java/com/sun/mail/pop3/POP3Store.java	2010-06-16 15:21:18.000000000 -0700
+***************
+*** 263,268 ****
+--- 263,275 ----
+  
+  	supportsUidl = capabilities == null || capabilities.containsKey("UIDL");
+  
++         /*
++          * AOL's POP server does not advertise UIDL support but it does support it.
++          */
++         if (host.equals("pop.aol.com")) {
++             supportsUidl = true;
++         }
++ 
+  	String msg = null;
+  	if ((msg = p.login(user, passwd)) != null) {
+  	    try {

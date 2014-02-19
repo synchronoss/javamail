@@ -1,0 +1,29 @@
+--- src/main/java/com/sun/mail/iap/Protocol.java	2013-02-20 08:12:13.000000000 -0800
++++ src.new/main/java/com/sun/mail/iap/Protocol.java	2013-02-20 08:11:29.000000000 -0800
+@@ -85,6 +85,13 @@ public class Protocol {
+     private static final byte[] CRLF = { (byte)'\r', (byte)'\n'};
+  
+     /**
++     * Different command tags to specify whether or not the backend
++     * needs to update the 'last login' data.
++     */
++    private static final String tagLastLoginUpdate = "LLUP";
++    private static final String tagNoLastLoginUpdate = "LLNOUP";
++ 
++    /**
+      * Constructor. <p>
+      * 
+      * Opens a connection to the given host at given port.
+@@ -261,7 +268,12 @@ public class Protocol {
+                 throws IOException, ProtocolException {
+         // assert Thread.holdsLock(this);
+         // can't assert because it's called from constructor
+-        String tag = "A" + Integer.toString(tagCounter++, 10); // unique tag
++        String tag = Integer.toString(tagCounter++, 10); // unique tag
++        if ("LOGIN".equals(command) || command.startsWith("AUTHENTICATE")) {
++            tag = tagLastLoginUpdate + tag;
++        } else {
++            tag = tagNoLastLoginUpdate + tag;
++        }
+ 
+         output.writeBytes(tag + " " + command);

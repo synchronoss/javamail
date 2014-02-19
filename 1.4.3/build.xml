@@ -1,0 +1,71 @@
+<project name="JavaMail" default="jar"> 
+
+    <!-- The JavaMail project has ditched Ant in favor of Maven.
+         The official Ant build is broken, so use this instead. -->
+
+    <property name="mail.spec.version" value="1.4"/>
+    <property name="release.version" value="1.4.3.lz3"/>
+    <property name="release.mail.jar" value="mail-${release.version}.jar"/>
+
+    <property name="src.dir" location="src/main/java"/>
+    <property name="resources.dir" location="src/main/resources"/>
+
+    <property name="build.dir" location="target"/>
+    <property name="generated.src.dir" location="${build.dir}/generated-source"/>
+    <property name="classes.dir" location="${build.dir}/classes"/>
+    <property name="release.dir" location="${build.dir}/release"/>
+
+
+    <target name="generate-code">
+        <mkdir dir="${generated.src.dir}"/>
+
+        <copy file="${resources.dir}/javax/mail/Version.java"
+              toFile="${generated.src.dir}/javax/mail/Version.java">
+            <filterset begintoken="$${" endtoken="}">
+                <filter token="mail.version" value="${release.version}"/>
+            </filterset>
+        </copy>
+    </target>
+
+    <target name="compile" depends="generate-code" description="Compile JavaMail sources">
+        <mkdir dir="${classes.dir}"/>
+
+        <javac includeantruntime="no"
+               srcdir="${src.dir}"
+               destdir="${classes.dir}"
+               debug="on"
+               optimize="off"
+               source="1.7"
+               deprecation="off"
+               failonerror="true"
+               target="1.7"
+               encoding="UTF-8">
+            <sourcepath location="${generated.src.dir}"/>
+        </javac>
+    </target>
+
+    <target name="jar" depends="compile" description="Build JavaMail jar">
+        <mkdir dir="${release.dir}"/>
+
+        <jar basedir="${classes.dir}" jarfile="${release.dir}/${release.mail.jar}">
+            <manifest>
+                <attribute name="Extension-Name" value="javax.mail"/>
+                <attribute name="Specification-Title" value="JavaMail(TM) API Design Specification"/>
+                <attribute name="Specification-Version" value="${mail.spec.version}"/>
+                <attribute name="Specification-Vendor" value="Sun Microsystems, Inc."/>
+                <attribute name="Implementation-Title" value="javax.mail"/>
+                <attribute name="Implementation-Version" value="${release.version}"/>
+                <attribute name="Implementation-Vendor" value="Sun Microsystems, Inc."/>
+                <attribute name="Implementation-Vendor-Id" value="com.sun"/>
+            </manifest>
+
+            <metainf dir="${resources.dir}/META-INF"
+                     includes="LICENSE.txt,javamail.charset.map,javamail.default.*,mailcap"/>
+        </jar>
+    </target>
+
+    <target name="clean" description="Remove all generated files">
+        <delete dir="${build.dir}"/>
+    </target>
+
+</project>

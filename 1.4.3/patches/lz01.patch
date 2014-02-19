@@ -1,0 +1,26 @@
+--- a/../src/main/java/com/sun/mail/imap/protocol/ENVELOPE.java	Wed Nov  5 15:11:24 2008
++++ b/../src/main/java/com/sun/mail/imap/protocol/ENVELOPE.java	Wed Nov  5 15:11:24 2008
+@@ -148,10 +148,22 @@
+     private static final long serialVersionUID = -3835822029483122232L;
+
+     IMAPAddress(Response r) throws ParsingException {
+         r.skipSpaces(); // skip leading spaces
+
++        // LASZLO begin workaround for InterMail's broken ENVELOPE fetch response,
++        // which has illegal "()" for the "From", "Sender", and "Reply-To" elements
++        // when the message has a malformed "From" header:
++        //     FETCH (ENVELOPE ("Thu, 16 Oct 2008 11:33:44 -0700" "Echoes" () () () ...
++        if (r.peekByte() == ')') {
++            encodedPersonal = "invalid-address";
++            address = "invalid-address";
++            // leave the closing paren in the response buffer
++            return;
++        }
++        // end workaround
++
+         if (r.readByte() != '(')
+             throw new ParsingException("ADDRESS parse error");
+
+         encodedPersonal = r.readString();
+
+End of Patch.
