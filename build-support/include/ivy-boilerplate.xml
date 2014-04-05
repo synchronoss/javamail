@@ -1,7 +1,7 @@
 <project name="ivy-boilerplate" xmlns:ivy="antlib:org.apache.ivy.ant">
 
-    <property name="artifactory.host" value="pansel.qa.laszlosystems.com"/>
-    <property name="artifactory.url" value="http://${artifactory.host}:8080/artifactory"/>
+    <property name="artifactory.host" value="172.26.64.28"/>
+    <property name="artifactory.url" value="http://${artifactory.host}:8081/artifactory"/>
 
     <!-- If true, dependencies will be resolved only from Ivy's cache -->
     <property name="offline" value="false"/>
