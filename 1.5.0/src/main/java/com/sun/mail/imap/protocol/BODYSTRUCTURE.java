@@ -385,6 +385,10 @@ public class BODYSTRUCTURE implements Item {
 
 	ParameterList list = null;
 	byte b = r.readByte();
+	if (b == '"') {
+	    r.skipSpaces();
+	    b = r.readByte();
+	}
 	if (b == '(') {
 	    list = new ParameterList();
 	    do {

@@ -1,0 +1,13 @@
+--- a/1.5.0/src/main/java/com/sun/mail/imap/protocol/BODYSTRUCTURE.java
++++ b/1.5.0/src/main/java/com/sun/mail/imap/protocol/BODYSTRUCTURE.java
+@@ -385,6 +385,10 @@ public class BODYSTRUCTURE implements Item {
+ 
+ 	ParameterList list = null;
+ 	byte b = r.readByte();
++	if (b == '"') {
++	    r.skipSpaces();
++	    b = r.readByte();
++	}
+ 	if (b == '(') {
+ 	    list = new ParameterList();
+ 	    do {
