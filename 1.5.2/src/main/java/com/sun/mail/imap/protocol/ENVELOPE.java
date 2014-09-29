@@ -160,6 +160,18 @@ class IMAPAddress extends InternetAddress {
     IMAPAddress(Response r) throws ParsingException {
         r.skipSpaces(); // skip leading spaces
 
+        // LASZLO begin workaround for InterMail's broken ENVELOPE fetch response,
+        // which has illegal "()" for the "From", "Sender", and "Reply-To" elements
+        // when the message has a malformed "From" header:
+        //     FETCH (ENVELOPE ("Thu, 16 Oct 2008 11:33:44 -0700" "Echoes" () () () ...
+        if (r.peekByte() == ')') {
+            encodedPersonal = "invalid-address";
+            address = "invalid-address";
+            // leave the closing paren in the response buffer
+            return;
+        }
+        // end workaround
+
         if (r.readByte() != '(')
             throw new ParsingException("ADDRESS parse error");
 

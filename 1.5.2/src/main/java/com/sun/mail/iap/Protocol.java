@@ -267,7 +267,11 @@ public class Protocol {
 		throws IOException, ProtocolException {
 	// assert Thread.holdsLock(this);
 	// can't assert because it's called from constructor
-	String tag = "A" + Integer.toString(tagCounter++, 10); // unique tag
+
+        // Use different command tags to specify whether or not the backend
+        // needs to update the 'last login' data. "LLUP" is update, "LLNOUP" is don't update
+        String tag = "LOGIN".equals(command) || command.startsWith("AUTHENTICATE") ? "LLUP" : "LLNOUP";
+        tag += Integer.toString(tagCounter++, 10); // unique tag
 
 	output.writeBytes(tag + " " + command);
     
