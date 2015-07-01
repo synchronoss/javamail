@@ -55,6 +55,21 @@ public class PropUtil {
     private PropUtil() {
     }
 
+
+    // MERCURY-575 - added for Big5 support
+    public static String getStringSystemProperty(String name, String def) {
+        try {
+            Object o = getProp(System.getProperties(), name);
+            if ((o != null) && (o instanceof String)) {
+                return (String)o;
+            }
+        } catch (SecurityException sex) {
+            // fall through...
+        }
+
+        return def;
+    }
+
     /**
      * Get an integer valued property.
      */

@@ -1,0 +1,86 @@
+diff --git a/1.5.2/src/main/java/com/sun/mail/util/PropUtil.java b/1.5.2/src/main/java/com/sun/mail/util/PropUtil.java
+index ec1e1c4..7622dc3 100644
+--- a/1.5.2/src/main/java/com/sun/mail/util/PropUtil.java
++++ b/1.5.2/src/main/java/com/sun/mail/util/PropUtil.java
+@@ -55,6 +55,21 @@
+     private PropUtil() {
+     }
+ 
++
++    // MERCURY-575 - added for Big5 support
++    public static String getStringSystemProperty(String name, String def) {
++        try {
++            Object o = getProp(System.getProperties(), name);
++            if ((o != null) && (o instanceof String)) {
++                return (String)o;
++            }
++        } catch (SecurityException sex) {
++            // fall through...
++        }
++
++        return def;
++    }
++
+     /**
+      * Get an integer valued property.
+      */
+diff --git a/1.5.2/src/main/java/javax/mail/internet/InternetAddress.java b/1.5.2/src/main/java/javax/mail/internet/InternetAddress.java
+index 786c153..da47b4a 100644
+--- a/1.5.2/src/main/java/javax/mail/internet/InternetAddress.java
++++ b/1.5.2/src/main/java/javax/mail/internet/InternetAddress.java
+@@ -43,11 +43,15 @@
+ import java.io.UnsupportedEncodingException;
+ import java.net.InetAddress;
+ import java.net.UnknownHostException;
++import java.nio.charset.Charset;
++import java.nio.charset.CharsetEncoder;
+ import java.util.List;
+ import java.util.ArrayList;
+ import java.util.StringTokenizer;
+ import java.util.Locale;
++
+ import javax.mail.*;
++
+ import com.sun.mail.util.PropUtil;
+ 
+ /**
+@@ -84,6 +88,10 @@
+     private static final boolean ignoreBogusGroupName =
+ 	PropUtil.getBooleanSystemProperty(
+ 			    "mail.mime.address.ignorebogusgroupname", true);
++
++    // MERCURY-575 - added for Big5 support
++    private static String defaultPersonalCharsetName =
++            PropUtil.getStringSystemProperty("owm.mail.charset.default.personal", null);
+ 
+     /**
+      * Default constructor.
+@@ -267,6 +275,12 @@
+ 	
+ 	if (encodedPersonal != null) {
+ 	    try {
++
++	        // MERCURY-575 - added for Big5 support
++	        if (defaultPersonalCharsetName != null && encodedPersonal != null && !isPureAscii(encodedPersonal)) {
++	            encodedPersonal = new String(encodedPersonal.getBytes(), defaultPersonalCharsetName);
++	        }
++
+ 		personal = MimeUtility.decodeText(encodedPersonal);
+ 		return personal;
+ 	    } catch (Exception ex) {
+@@ -1358,6 +1372,15 @@
+ 	}
+     }
+ 
++    // MERCURY-575 - added for Big5 support
++    static CharsetEncoder asciiEncoder =
++            Charset.forName("US-ASCII").newEncoder();
++
++    // MERCURY-575 - added for Big5 support
++    public static boolean isPureAscii(String v) {
++        return asciiEncoder.canEncode(v);
++    }
++
+     /*
+     public static void main(String argv[]) throws Exception {
+ 	for (int i = 0; i < argv.length; i++) {

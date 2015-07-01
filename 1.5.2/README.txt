@@ -18,3 +18,5 @@ lz02: (obsolete) Added a hard-coded asumption that "pop.aol.com" supports UIDL.
 No longer required because of the new "mail.pop3.disablecapa" session property introduced in JavaMail 1.4.4.
 
 lz03: Use the command tag to tell the backend server whether to update the "last login" time.
+
+owm06: Support an OWM system property to allow us to override the non-ASCII charsets on 'personal' name (MERCURY-575).

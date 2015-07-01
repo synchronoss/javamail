@@ -43,11 +43,15 @@ package javax.mail.internet;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetEncoder;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 import java.util.Locale;
+
 import javax.mail.*;
+
 import com.sun.mail.util.PropUtil;
 
 /**
@@ -84,6 +88,10 @@ public class InternetAddress extends Address implements Cloneable {
     private static final boolean ignoreBogusGroupName =
 	PropUtil.getBooleanSystemProperty(
 			    "mail.mime.address.ignorebogusgroupname", true);
+
+    // MERCURY-575 - added for Big5 support
+    private static String defaultPersonalCharsetName =
+            PropUtil.getStringSystemProperty("owm.mail.charset.default.personal", null);
 
     /**
      * Default constructor.
@@ -267,6 +275,12 @@ public class InternetAddress extends Address implements Cloneable {
 	
 	if (encodedPersonal != null) {
 	    try {
+
+	        // MERCURY-575 - added for Big5 support
+	        if (defaultPersonalCharsetName != null && encodedPersonal != null && !isPureAscii(encodedPersonal)) {
+	            encodedPersonal = new String(encodedPersonal.getBytes(), defaultPersonalCharsetName);
+	        }
+
 		personal = MimeUtility.decodeText(encodedPersonal);
 		return personal;
 	    } catch (Exception ex) {
@@ -1356,6 +1370,15 @@ public class InternetAddress extends Address implements Cloneable {
 	} catch (StringIndexOutOfBoundsException e) {
 	    return -1;
 	}
+    }
+
+    // MERCURY-575 - added for Big5 support
+    static CharsetEncoder asciiEncoder =
+            Charset.forName("US-ASCII").newEncoder();
+
+    // MERCURY-575 - added for Big5 support
+    public static boolean isPureAscii(String v) {
+        return asciiEncoder.canEncode(v);
     }
 
     /*
