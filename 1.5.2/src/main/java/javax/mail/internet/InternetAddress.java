@@ -187,6 +187,7 @@ public class InternetAddress extends Address implements Cloneable {
      * Return a copy of this InternetAddress object.
      * @since		JavaMail 1.2
      */
+    @Override
     public Object clone() {
 	InternetAddress a = null;
 	try {
@@ -199,6 +200,7 @@ public class InternetAddress extends Address implements Cloneable {
      * Return the type of this address. The type of an InternetAddress
      * is "rfc822".
      */
+    @Override
     public String getType() {
 	return "rfc822";
     }
@@ -219,7 +221,7 @@ public class InternetAddress extends Address implements Cloneable {
      * characters, no encoding is done and the name is used as is. <p>
      *
      * @param	name 	personal name
-     * @param	charset	MIME charset to be used to encode the name as 
+     * @param	charset	MIME charset to be used to encode the name as
      *			per RFC 2047
      * @see 	#setPersonal(String)
      * @exception UnsupportedEncodingException if the charset encoding
@@ -236,7 +238,7 @@ public class InternetAddress extends Address implements Cloneable {
 
     /**
      * Set the personal name. If the name contains non US-ASCII
-     * characters, then the name will be encoded using the platform's 
+     * characters, then the name will be encoded using the platform's
      * default charset. If the name contains only US-ASCII characters,
      * no encoding is done and the name is used as is. <p>
      *
@@ -245,7 +247,7 @@ public class InternetAddress extends Address implements Cloneable {
      * @exception UnsupportedEncodingException if the charset encoding
      *		  fails.
      */
-    public void setPersonal(String name) 
+    public void setPersonal(String name)
 		throws UnsupportedEncodingException {
 	personal = name;
 	if (name != null)
@@ -272,13 +274,13 @@ public class InternetAddress extends Address implements Cloneable {
     public String getPersonal() {
 	if (personal != null)
 	    return personal;
-	
+
 	if (encodedPersonal != null) {
 	    try {
 
 	        // MERCURY-575 - added for Big5 support
 	        if (defaultPersonalCharsetName != null && encodedPersonal != null && !isPureAscii(encodedPersonal)) {
-	            encodedPersonal = new String(encodedPersonal.getBytes(), defaultPersonalCharsetName);
+	            encodedPersonal = new String(encodedPersonal.getBytes("ISO-8859-1"), defaultPersonalCharsetName);
 	        }
 
 		personal = MimeUtility.decodeText(encodedPersonal);
@@ -301,13 +303,14 @@ public class InternetAddress extends Address implements Cloneable {
      *
      * @return		possibly encoded address string
      */
+    @Override
     public String toString() {
 	String a = address == null ? "" : address;
 	if (encodedPersonal == null && personal != null)
 	    try {
 		encodedPersonal = MimeUtility.encodeWord(personal);
 	    } catch (UnsupportedEncodingException ex) { }
-	
+
 	if (encodedPersonal != null)
 	    return quotePhrase(encodedPersonal) + " <" + a + ">";
 	else if (isGroup() || isSimple())
@@ -319,10 +322,10 @@ public class InternetAddress extends Address implements Cloneable {
     /**
      * Returns a properly formatted address (RFC 822 syntax) of
      * Unicode characters.
-     *   
+     *
      * @return          Unicode address string
      * @since           JavaMail 1.2
-     */  
+     */
     public String toUnicodeString() {
 	String p = getPersonal();
         if (p != null)
@@ -338,7 +341,7 @@ public class InternetAddress extends Address implements Cloneable {
      *
      * This is tricky, since a phrase is defined as 1 or more
      * RFC822 words, separated by LWSP. Now, a word that contains
-     * LWSP is supposed to be quoted, and this is exactly what the 
+     * LWSP is supposed to be quoted, and this is exactly what the
      * MimeUtility.quote() method does. However, when dealing with
      * a phrase, any LWSP encountered can be construed to be the
      * separator between words, and not part of the words themselves.
@@ -358,7 +361,7 @@ public class InternetAddress extends Address implements Cloneable {
 
         for (int i = 0; i < len; i++) {
             char c = phrase.charAt(i);
-            if (c == '"' || c == '\\') { 
+            if (c == '"' || c == '\\') {
                 // need to escape them and then quote the whole string
                 StringBuffer sb = new StringBuffer(len + 3);
                 sb.append('"');
@@ -371,7 +374,7 @@ public class InternetAddress extends Address implements Cloneable {
                 }
                 sb.append('"');
                 return sb.toString();
-            } else if ((c < 040 && c != '\r' && c != '\n' && c != '\t') || 
+            } else if ((c < 040 && c != '\r' && c != '\n' && c != '\t') ||
 			c >= 0177 || rfc822phrase.indexOf(c) >= 0)
                // These characters cause the string to be quoted
                 needQuoting = true;
@@ -406,6 +409,7 @@ public class InternetAddress extends Address implements Cloneable {
     /**
      * The equality operator.
      */
+    @Override
     public boolean equals(Object a) {
 	if (!(a instanceof InternetAddress))
 	    return false;
@@ -422,6 +426,7 @@ public class InternetAddress extends Address implements Cloneable {
     /**
      * Compute a hash code for the address.
      */
+    @Override
     public int hashCode() {
 	if (address == null)
 	    return 0;
@@ -436,7 +441,7 @@ public class InternetAddress extends Address implements Cloneable {
      * hence is mail-safe. <p>
      *
      * @param addresses	array of InternetAddress objects
-     * @exception 	ClassCastException if any address object in the 
+     * @exception 	ClassCastException if any address object in the
      *			given array is not an InternetAddress object. Note
      *			that this is a RuntimeException.
      * @return		comma separated string of addresses
@@ -452,15 +457,15 @@ public class InternetAddress extends Address implements Cloneable {
      * hence is mail-safe. <p>
      *
      * The 'used' parameter specifies the number of character positions
-     * already taken up in the field into which the resulting address 
-     * sequence string is to be inserted. It is used to determine the 
+     * already taken up in the field into which the resulting address
+     * sequence string is to be inserted. It is used to determine the
      * line-break positions in the resulting address sequence string.
      *
      * @param addresses	array of InternetAddress objects
      * @param used	number of character positions already used, in
      *			the field into which the address string is to
      *			be inserted.
-     * @exception 	ClassCastException if any address object in the 
+     * @exception 	ClassCastException if any address object in the
      *			given array is not an InternetAddress object. Note
      *			that this is a RuntimeException.
      * @return		comma separated string of addresses
@@ -510,7 +515,7 @@ public class InternetAddress extends Address implements Cloneable {
 	int pos;
 	if ((pos = s.lastIndexOf("\r\n")) != -1)
 	    return s.length() - pos - 2;
-	else 
+	else
 	    return s.length() + used;
     }
 
@@ -624,7 +629,7 @@ public class InternetAddress extends Address implements Cloneable {
      * @return			array of InternetAddress objects
      * @exception		AddressException if the parse failed
      */
-    public static InternetAddress[] parse(String addresslist) 
+    public static InternetAddress[] parse(String addresslist)
 				throws AddressException {
 	return parse(addresslist, true);
     }
@@ -1278,7 +1283,7 @@ public class InternetAddress extends Address implements Cloneable {
 	    /*
 	     * RFC 1034 rule is more strict
 	     * the full rule is:
-	     * 
+	     *
 	     * <domain> ::= <subdomain> | " "
 	     * <subdomain> ::= <label> | <subdomain> "." <label>
 	     * <label> ::= <letter> [ [ <ldh-str> ] <let-dig> ]
