@@ -62,7 +62,7 @@ index 786c153..da47b4a 100644
 +
 +	        // MERCURY-575 - added for Big5 support
 +	        if (defaultPersonalCharsetName != null && encodedPersonal != null && !isPureAscii(encodedPersonal)) {
-+	            encodedPersonal = new String(encodedPersonal.getBytes(), defaultPersonalCharsetName);
++	            encodedPersonal = new String(encodedPersonal.getBytes("ISO-8859-1"), defaultPersonalCharsetName);
 +	        }
 +
  		personal = MimeUtility.decodeText(encodedPersonal);
