@@ -818,8 +818,10 @@ public class IMAPStore extends Store
 	else
 	    throw new ProtocolException("No login methods supported!");
 
-	if (proxyAuthUser != null)
-	    p.proxyauth(proxyAuthUser);
+	/*
+	 * if (proxyAuthUser != null)
+	 *     p.proxyauth(proxyAuthUser);
+	 */
 
 	/*
 	 * If marker is still there, capabilities haven't been refreshed,
