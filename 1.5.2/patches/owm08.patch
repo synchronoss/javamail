@@ -1,0 +1,17 @@
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java b/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
+index c7d7647..b8cc44e 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
+@@ -818,8 +818,10 @@
+    else
+        throw new ProtocolException("No login methods supported!");
+ 
+-   if (proxyAuthUser != null)
+-       p.proxyauth(proxyAuthUser);
++   /*
++    * if (proxyAuthUser != null)
++    *     p.proxyauth(proxyAuthUser);
++    */
+ 
+    /*
+     * If marker is still there, capabilities haven't been refreshed,

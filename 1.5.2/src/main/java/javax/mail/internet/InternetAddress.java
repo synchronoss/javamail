@@ -272,28 +272,47 @@ public class InternetAddress extends Address implements Cloneable {
      * @return	personal name
      */
     public String getPersonal() {
-	if (personal != null)
-	    return personal;
+        if (personal != null)
+            return personal;
 
-	if (encodedPersonal != null) {
-	    try {
+        if (encodedPersonal != null) {
+            try {
+                // MERCURY-575 - added for Big5 support
+                if (defaultPersonalCharsetName != null && encodedPersonal != null && !isPureAscii(encodedPersonal)) {
+                    // Convert using the configured charset - eg necessary for Big5 encodings.
+                    String tempEncodedPersonal = new String(encodedPersonal.getBytes("ISO-8859-1"), defaultPersonalCharsetName);
 
-	        // MERCURY-575 - added for Big5 support
-	        if (defaultPersonalCharsetName != null && encodedPersonal != null && !isPureAscii(encodedPersonal)) {
-	            encodedPersonal = new String(encodedPersonal.getBytes("ISO-8859-1"), defaultPersonalCharsetName);
-	        }
+                    // Check if we have the same number of '?' characters before and after the conversion.
+                    // If not it could indicate a conversion failure, in which case stick with the original value.
+                    int n;
+                    if (!(
+                            ((n = getNumberOfChars(encodedPersonal, "?")) > 0)
+                            &&
+                            (getNumberOfChars(tempEncodedPersonal, "?") != n)
+                    )) {
+                        // The data may contain '?' chars but they don't appear to represent a conversion failure.
+                        encodedPersonal = tempEncodedPersonal;
+                    }
+                }
 
-		personal = MimeUtility.decodeText(encodedPersonal);
-		return personal;
-	    } catch (Exception ex) {
-		// 1. ParseException: either its an unencoded string or
-		//	it can't be parsed
-		// 2. UnsupportedEncodingException: can't decode it.
-		return encodedPersonal;
-	    }
-	}
-	// No personal or encodedPersonal, return null
-	return null;
+                personal = MimeUtility.decodeText(encodedPersonal);
+                return personal;
+            }
+            catch (Exception ex) {
+                // 1. ParseException: either its an unencoded string or
+                //	it can't be parsed
+                // 2. UnsupportedEncodingException: can't decode it.
+                return encodedPersonal;
+            }
+        }
+        // No personal or encodedPersonal, return null
+        return null;
+    }
+
+    private int getNumberOfChars(String s, String c) {
+        int lnth = s.length();
+        int removed = s.replaceAll(c, "").length();
+        return lnth - removed;
     }
 
     /**
@@ -1384,6 +1403,35 @@ public class InternetAddress extends Address implements Cloneable {
     // MERCURY-575 - added for Big5 support
     public static boolean isPureAscii(String v) {
         return asciiEncoder.canEncode(v);
+    }
+
+    // currently unused ...but may be useful
+    public static boolean isBig5(String v) {
+        if ((v == null) || (v.length() == 0)) {
+            return false;
+        }
+
+        if (isPureAscii(v)) {
+            return false;
+        }
+
+        int i = 0;
+        while (i < v.length()) {
+            char ch = v.charAt(i);
+
+            Character.UnicodeBlock block = Character.UnicodeBlock.of(ch);
+            if (Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS.equals(block)
+                ||
+                Character.UnicodeBlock.CJK_COMPATIBILITY_IDEOGRAPHS.equals(block)
+                ||
+                Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A.equals(block)) {
+                    return true;
+                }
+
+            i++;
+        }
+
+        return false;
     }
 
     /*
