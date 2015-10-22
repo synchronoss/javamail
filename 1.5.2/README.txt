@@ -20,3 +20,7 @@ No longer required because of the new "mail.pop3.disablecapa" session property i
 lz03: Use the command tag to tell the backend server whether to update the "last login" time.
 
 owm06: Support an OWM system property to allow us to override the non-ASCII charsets on 'personal' name (MERCURY-575).
+
+owm07: Avoid converting the 'personal' name if it fails (MERCURY-658).  Apply this patch after owm06.
+
+omw08: Patch to fix IMAP proxy support.
