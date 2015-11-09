@@ -24,3 +24,5 @@ owm06: Support an OWM system property to allow us to override the non-ASCII char
 owm07: Avoid converting the 'personal' name if it fails (MERCURY-658).  Apply this patch after owm06.
 
 omw08: Patch to fix IMAP proxy support.
+
+owm09: Fix for MERCURY-664 - NPE in the Utility toMessageSet loop.

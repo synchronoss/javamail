@@ -1,0 +1,13 @@
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/Utility.java b/1.5.2/src/main/java/com/sun/mail/imap/Utility.java
+index 668352f..2c6147e 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/Utility.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/Utility.java
+@@ -94,7 +94,7 @@
+        // get next message
+        msg = (IMAPMessage)msgs[i];
+ 
+-       if (msg.isExpunged()) // expunged message, skip it
++       if (msg == null || msg.isExpunged()) // expunged message, skip it
+            continue;
+        next = msg.getSequenceNumber();
+ 

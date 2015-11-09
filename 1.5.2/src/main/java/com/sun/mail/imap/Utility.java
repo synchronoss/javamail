@@ -94,7 +94,7 @@ public final class Utility {
 		// get next message
 		msg = (IMAPMessage)msgs[i];
 
-		if (msg.isExpunged()) // expunged message, skip it
+		if (msg == null || msg.isExpunged()) // expunged message, skip it
 		    continue;
 		next = msg.getSequenceNumber();
 
