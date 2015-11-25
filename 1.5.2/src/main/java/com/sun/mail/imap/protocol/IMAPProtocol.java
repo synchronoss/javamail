@@ -2080,6 +2080,9 @@ public class IMAPProtocol extends Protocol {
 	if (term == null || term.length == 0)
 	    throw new BadCommandException("Must have at least one sort term");
 
+	if (requiresRFC5957(term) && !hasCapability("SORT=DISPLAY"))
+	    throw new BadCommandException("SORT=DISPLAY not supported");
+
 	Argument args = new Argument();
 	Argument sargs = new Argument();
 	for (int i = 0; i < term.length; i++)
@@ -2757,5 +2760,14 @@ public class IMAPProtocol extends Protocol {
 	notifyResponseHandlers(r);
 	handleResult(response);
 	return id == null ? null : id.getServerParams();
+    }
+
+    public static boolean requiresRFC5957(final SortTerm[] terms) {
+	for (final SortTerm term : terms) {
+	    if (term.equals(SortTerm.DISPLAYFROM) || term.equals(SortTerm.DISPLAYTO)) {
+		return true;
+	    }
+	}
+	return false;
     }
 }

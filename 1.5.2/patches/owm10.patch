@@ -1,0 +1,45 @@
+--- a/1.5.2/src/main/java/com/sun/mail/imap/SortTerm.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/SortTerm.java
+@@ -67,6 +67,16 @@ public final class SortTerm {
+     public static final SortTerm DATE = new SortTerm("DATE");
+ 
+     /**
++     * Sort by first From display name.
++     */
++    public static final SortTerm DISPLAYFROM = new SortTerm("DISPLAYFROM");
++
++    /**
++     * Sort by display name of first To recipient.
++     */
++    public static final SortTerm DISPLAYTO = new SortTerm("DISPLAYTO");
++
++    /**
+      * Sort by first From email address.
+      */
+     public static final SortTerm FROM = new SortTerm("FROM");
+--- a/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
+@@ -2080,6 +2080,9 @@ public class IMAPProtocol extends Protocol {
+ 	if (term == null || term.length == 0)
+ 	    throw new BadCommandException("Must have at least one sort term");
+ 
++	if (requiresRFC5957(term) && !hasCapability("SORT=DISPLAY"))
++	    throw new BadCommandException("SORT=DISPLAY not supported");
++
+ 	Argument args = new Argument();
+ 	Argument sargs = new Argument();
+ 	for (int i = 0; i < term.length; i++)
+@@ -2758,4 +2761,13 @@ public class IMAPProtocol extends Protocol {
+ 	handleResult(response);
+ 	return id == null ? null : id.getServerParams();
+     }
++
++    public static boolean requiresRFC5957(final SortTerm[] terms) {
++	for (final SortTerm term : terms) {
++	    if (term.equals(SortTerm.DISPLAYFROM) || term.equals(SortTerm.DISPLAYTO)) {
++		return true;
++	    }
++	}
++	return false;
++    }
+ }
