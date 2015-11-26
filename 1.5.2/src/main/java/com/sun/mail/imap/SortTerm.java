@@ -67,6 +67,16 @@ public final class SortTerm {
     public static final SortTerm DATE = new SortTerm("DATE");
 
     /**
+     * Sort by first From display name.
+     */
+    public static final SortTerm DISPLAYFROM = new SortTerm("DISPLAYFROM");
+
+    /**
+     * Sort by display name of first To recipient.
+     */
+    public static final SortTerm DISPLAYTO = new SortTerm("DISPLAYTO");
+
+    /**
      * Sort by first From email address.
      */
     public static final SortTerm FROM = new SortTerm("FROM");
