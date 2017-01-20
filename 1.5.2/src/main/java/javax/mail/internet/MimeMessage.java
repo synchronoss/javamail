@@ -135,6 +135,11 @@ public class MimeMessage extends Message implements MimePart {
     protected Flags flags;
 
     /**
+     * The first line for this message.
+     */
+    protected String firstLine;
+
+    /**
      * A flag indicating whether the message has been modified.
      * If the message has not been modified, any data in the
      * <code>content</code> array is assumed to be valid and is used
@@ -232,6 +237,7 @@ public class MimeMessage extends Message implements MimePart {
     public MimeMessage(MimeMessage source) throws MessagingException {
 	super(source.session);
 	flags = source.getFlags();
+	firstLine = source.getFirstLine();
 	if (flags == null)	// make sure flags is always set
 	    flags = new Flags();
 	ByteArrayOutputStream bos;
@@ -2077,6 +2083,18 @@ public class MimeMessage extends Message implements MimePart {
      */
     public synchronized Flags getFlags() throws MessagingException {
 	return (Flags)flags.clone();
+    }
+
+    /**
+     * Return a <code>String</code> object containing the first line for
+     * this message. <p>
+     *
+     * @return          String containing the first line of this message
+     *                  (can be null)
+     * @exception       MessagingException for failures
+     */
+    public synchronized String getFirstLine() throws MessagingException {
+	return firstLine;
     }
 
     /**

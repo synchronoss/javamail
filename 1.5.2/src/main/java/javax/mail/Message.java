@@ -482,6 +482,14 @@ public abstract class Message implements Part {
 			throws MessagingException;
 
     /**
+     * Get the first line of this message.
+     *
+     * @return          the message's first line
+     * @exception       MessagingException for failures
+     */
+    public abstract String getFirstLine() throws MessagingException;
+
+    /**
      * Get the date this message was sent.
      *
      * @return          the date this message was sent

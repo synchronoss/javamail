@@ -142,6 +142,8 @@ public class FetchProfile {
 	 */
 	public static final Item FLAGS = new Item("FLAGS");
 
+	public static final Item FIRSTLINE = new Item("FIRSTLINE");
+
 	private String name;
 
 	/**

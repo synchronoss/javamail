@@ -222,6 +222,8 @@ public class FetchResponse extends IMAPResponse {
 	case 'F': case 'f':
 	    if (match(FLAGS.name))
 		return new FLAGS((IMAPResponse)this);
+	    else if (match(FIRSTLINE.name))
+		return new FIRSTLINE(this);
 	    break;
 	case 'I': case 'i':
 	    if (match(INTERNALDATE.name))

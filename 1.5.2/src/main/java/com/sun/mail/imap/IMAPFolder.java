@@ -1171,6 +1171,10 @@ public class IMAPFolder extends Folder implements UIDFolder, ResponseHandler {
 	    command.append(first ? "RFC822.SIZE" : " RFC822.SIZE");
 	    first = false;
 	}
+	if (fp.contains(FetchProfile.Item.FIRSTLINE)) {
+	    command.append(first ? "FIRSTLINE" : " FIRSTLINE");
+	    first = false;
+	}
 
 	// if we're not fetching all headers, fetch individual headers
 	String[] hdrs = null;
