@@ -1,0 +1,116 @@
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/IMAPFolder.java b/1.5.2/src/main/java/com/sun/mail/imap/IMAPFolder.java
+index 6adc14a..dd49f84 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/IMAPFolder.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/IMAPFolder.java
+@@ -1171,6 +1171,10 @@ public class IMAPFolder extends Folder implements UIDFolder, ResponseHandler {
+ 	    command.append(first ? "RFC822.SIZE" : " RFC822.SIZE");
+ 	    first = false;
+ 	}
++	if (fp.contains(FetchProfile.Item.FIRSTLINE)) {
++	    command.append(first ? "FIRSTLINE" : " FIRSTLINE");
++	    first = false;
++	}
+ 
+ 	// if we're not fetching all headers, fetch individual headers
+ 	String[] hdrs = null;
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/IMAPMessage.java b/1.5.2/src/main/java/com/sun/mail/imap/IMAPMessage.java
+index 5b63da9..e513783 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/IMAPMessage.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/IMAPMessage.java
+@@ -1195,6 +1195,8 @@ public class IMAPMessage extends MimeMessage implements ReadableMime {
+ 	    receivedDate = ((INTERNALDATE)item).getDate();
+ 	else if (item instanceof RFC822SIZE)
+ 	    size = ((RFC822SIZE)item).size;
++	else if (item instanceof FIRSTLINE)
++	    firstLine = ((FIRSTLINE)item).firstLine;
+ 
+ 	// Check for the BODYSTRUCTURE item
+ 	else if (item instanceof BODYSTRUCTURE)
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/protocol/FetchResponse.java b/1.5.2/src/main/java/com/sun/mail/imap/protocol/FetchResponse.java
+index 56b9726..f7dee86 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/protocol/FetchResponse.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/protocol/FetchResponse.java
+@@ -222,6 +222,8 @@ public class FetchResponse extends IMAPResponse {
+ 	case 'F': case 'f':
+ 	    if (match(FLAGS.name))
+ 		return new FLAGS((IMAPResponse)this);
++	    else if (match(FIRSTLINE.name))
++		return new FIRSTLINE(this);
+ 	    break;
+ 	case 'I': case 'i':
+ 	    if (match(INTERNALDATE.name))
+diff --git a/1.5.2/src/main/java/javax/mail/FetchProfile.java b/1.5.2/src/main/java/javax/mail/FetchProfile.java
+index 3dad82d..285f0bc 100644
+--- a/1.5.2/src/main/java/javax/mail/FetchProfile.java
++++ b/1.5.2/src/main/java/javax/mail/FetchProfile.java
+@@ -142,6 +142,8 @@ public class FetchProfile {
+ 	 */
+ 	public static final Item FLAGS = new Item("FLAGS");
+ 
++	public static final Item FIRSTLINE = new Item("FIRSTLINE");
++
+ 	private String name;
+ 
+ 	/**
+diff --git a/1.5.2/src/main/java/javax/mail/Message.java b/1.5.2/src/main/java/javax/mail/Message.java
+index 0334520..ba6f896 100644
+--- a/1.5.2/src/main/java/javax/mail/Message.java
++++ b/1.5.2/src/main/java/javax/mail/Message.java
+@@ -482,6 +482,14 @@ public abstract class Message implements Part {
+ 			throws MessagingException;
+ 
+     /**
++     * Get the first line of this message.
++     *
++     * @return          the message's first line
++     * @exception       MessagingException for failures
++     */
++    public abstract String getFirstLine() throws MessagingException;
++
++    /**
+      * Get the date this message was sent.
+      *
+      * @return          the date this message was sent
+diff --git a/1.5.2/src/main/java/javax/mail/internet/MimeMessage.java b/1.5.2/src/main/java/javax/mail/internet/MimeMessage.java
+index eb40593..e8fc027 100644
+--- a/1.5.2/src/main/java/javax/mail/internet/MimeMessage.java
++++ b/1.5.2/src/main/java/javax/mail/internet/MimeMessage.java
+@@ -135,6 +135,11 @@ public class MimeMessage extends Message implements MimePart {
+     protected Flags flags;
+ 
+     /**
++     * The first line for this message.
++     */
++    protected String firstLine;
++
++    /**
+      * A flag indicating whether the message has been modified.
+      * If the message has not been modified, any data in the
+      * <code>content</code> array is assumed to be valid and is used
+@@ -232,6 +237,7 @@ public class MimeMessage extends Message implements MimePart {
+     public MimeMessage(MimeMessage source) throws MessagingException {
+ 	super(source.session);
+ 	flags = source.getFlags();
++	firstLine = source.getFirstLine();
+ 	if (flags == null)	// make sure flags is always set
+ 	    flags = new Flags();
+ 	ByteArrayOutputStream bos;
+@@ -2080,6 +2086,18 @@ public class MimeMessage extends Message implements MimePart {
+     }
+ 
+     /**
++     * Return a <code>String</code> object containing the first line for
++     * this message. <p>
++     *
++     * @return          String containing the first line of this message
++     *                  (can be null)
++     * @exception       MessagingException for failures
++     */
++    public synchronized String getFirstLine() throws MessagingException {
++	return firstLine;
++    }
++
++    /**
+      * Check whether the flag specified in the <code>flag</code>
+      * argument is set in this message. <p>
+      *
