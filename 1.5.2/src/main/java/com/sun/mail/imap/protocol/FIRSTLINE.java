@@ -28,12 +28,15 @@ public class FIRSTLINE implements Item {
 
         r.skipSpaces();
 
+        // expect data of the form ("the quoted first line \" (maybe with escaped chars in it)")
+
         if (r.readByte() != '(')
             throw new ParsingException("FIRSTLINE parse error");
 
-        firstLine = r.readString(')');
+        // readString() parses a quoted string value and returns null if it fails
+        firstLine = r.readString();
 
-        if (r.readByte() != ')')
+        if ((firstLine == null) || (r.readByte() != ')'))
             throw new ParsingException("FIRSTLINE parse error");
     }
 }

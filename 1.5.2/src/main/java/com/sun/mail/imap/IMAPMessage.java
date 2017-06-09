@@ -1099,6 +1099,7 @@ public class IMAPMessage extends MimeMessage implements ReadableMime {
 	private boolean needHeaders = false;
 	private boolean needSize = false;
 	private boolean needMessage = false;
+	private boolean needFirstline = false;
 	private String[] hdrs = null;
 	private Set need = new HashSet();	// Set<FetchItem>
 
@@ -1126,6 +1127,8 @@ public class IMAPMessage extends MimeMessage implements ReadableMime {
 		needSize = true;
 	    if (fp.contains(IMAPFolder.FetchProfileItem.MESSAGE))
 		needMessage = true;
+	    if (fp.contains(IMAPFolder.FetchProfileItem.FIRSTLINE))
+	    needFirstline = true;
 	    hdrs = fp.getHeaderNames();
 	    for (int i = 0; i < fitems.length; i++) {
 		if (fp.contains(fitems[i].getFetchProfileItem()))
@@ -1153,6 +1156,8 @@ public class IMAPMessage extends MimeMessage implements ReadableMime {
 		return true;
 	    if (needMessage && !m.bodyLoaded)		// no message body
 		return true;
+	    if (needFirstline && m.firstLine == null)
+	    return true;
 
 	    // Is the desired header present ?
 	    for (int i = 0; i < hdrs.length; i++) {
