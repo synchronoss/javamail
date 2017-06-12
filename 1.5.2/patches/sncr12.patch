@@ -1,0 +1,66 @@
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/IMAPMessage.java b/1.5.2/src/main/java/com/sun/mail/imap/IMAPMessage.java
+index e513783..59aaad0 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/IMAPMessage.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/IMAPMessage.java
+@@ -1099,6 +1099,7 @@ public class IMAPMessage extends MimeMessage implements ReadableMime {
+ 	private boolean needHeaders = false;
+ 	private boolean needSize = false;
+ 	private boolean needMessage = false;
++	private boolean needFirstline = false;
+ 	private String[] hdrs = null;
+ 	private Set need = new HashSet();	// Set<FetchItem>
+ 
+@@ -1126,6 +1127,8 @@ public class IMAPMessage extends MimeMessage implements ReadableMime {
+ 		needSize = true;
+ 	    if (fp.contains(IMAPFolder.FetchProfileItem.MESSAGE))
+ 		needMessage = true;
++	    if (fp.contains(IMAPFolder.FetchProfileItem.FIRSTLINE))
++		needFirstline = true;
+ 	    hdrs = fp.getHeaderNames();
+ 	    for (int i = 0; i < fitems.length; i++) {
+ 		if (fp.contains(fitems[i].getFetchProfileItem()))
+@@ -1153,6 +1156,8 @@ public class IMAPMessage extends MimeMessage implements ReadableMime {
+ 		return true;
+ 	    if (needMessage && !m.bodyLoaded)		// no message body
+ 		return true;
++	    if (needFirstline && m.firstLine == null)
++		return true;
+ 
+ 	    // Is the desired header present ?
+ 	    for (int i = 0; i < hdrs.length; i++) {
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/protocol/FIRSTLINE.java b/1.5.2/src/main/java/com/sun/mail/imap/protocol/FIRSTLINE.java
+index 81f0175..835ad01 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/protocol/FIRSTLINE.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/protocol/FIRSTLINE.java
+@@ -28,12 +28,15 @@ public class FIRSTLINE implements Item {
+ 
+         r.skipSpaces();
+ 
++        // expect data of the form ("the quoted first line \" (maybe with escaped chars in it)")
++
+         if (r.readByte() != '(')
+             throw new ParsingException("FIRSTLINE parse error");
+ 
+-        firstLine = r.readString(')');
++        // readString() parses a quoted string value and returns null if it fails
++        firstLine = r.readString();
+ 
+-        if (r.readByte() != ')')
++        if ((firstLine == null) || (r.readByte() != ')'))
+             throw new ParsingException("FIRSTLINE parse error");
+     }
+ }
+diff --git a/1.5.2/src/main/java/javax/mail/internet/MimeMessage.java b/1.5.2/src/main/java/javax/mail/internet/MimeMessage.java
+index e8fc027..f7e5bb6 100644
+--- a/1.5.2/src/main/java/javax/mail/internet/MimeMessage.java
++++ b/1.5.2/src/main/java/javax/mail/internet/MimeMessage.java
+@@ -2094,7 +2094,8 @@ public class MimeMessage extends Message implements MimePart {
+      * @exception       MessagingException for failures
+      */
+     public synchronized String getFirstLine() throws MessagingException {
+-	return firstLine;
++	if (firstLine == null) return null;
++	return firstLine.trim();
+     }
+ 
+     /**
