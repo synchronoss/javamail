@@ -2094,7 +2094,7 @@ public class MimeMessage extends Message implements MimePart {
      * @exception       MessagingException for failures
      */
     public synchronized String getFirstLine() throws MessagingException {
-	return firstLine;
+	return firstLine == null ? null : firstLine.trim();
     }
 
     /**
