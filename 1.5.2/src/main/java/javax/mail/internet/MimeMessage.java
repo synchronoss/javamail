@@ -2112,7 +2112,7 @@ public class MimeMessage extends Message implements MimePart {
      * @exception       MessagingException for failures
      */
     public synchronized byte[] getFirstLineAsBytes() throws MessagingException {
-    return firstLineAsBytes == null ? null : firstLineAsBytes;
+    return firstLineAsBytes;
     }
 
     /**

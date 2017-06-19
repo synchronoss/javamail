@@ -114,7 +114,7 @@ index b609271..24d5002 100644
 +     * @exception       MessagingException for failures
 +     */
 +    public synchronized byte[] getFirstLineAsBytes() throws MessagingException {
-+    return firstLineAsBytes == null ? null : firstLineAsBytes;
++    return firstLineAsBytes;
 +    }
 +
 +    /**
