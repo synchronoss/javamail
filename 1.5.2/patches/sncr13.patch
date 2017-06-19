@@ -1,0 +1,123 @@
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/IMAPMessage.java b/1.5.2/src/main/java/com/sun/mail/imap/IMAPMessage.java
+index 59aaad0..b5f5ef1 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/IMAPMessage.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/IMAPMessage.java
+@@ -1200,9 +1200,10 @@
+        receivedDate = ((INTERNALDATE)item).getDate();
+    else if (item instanceof RFC822SIZE)
+        size = ((RFC822SIZE)item).size;
+-   else if (item instanceof FIRSTLINE)
++   else if (item instanceof FIRSTLINE) {
+        firstLine = ((FIRSTLINE)item).firstLine;
+-
++       firstLineAsBytes = ((FIRSTLINE)item).firstLineAsBytes;
++   }
+    // Check for the BODYSTRUCTURE item
+    else if (item instanceof BODYSTRUCTURE)
+        bs = (BODYSTRUCTURE)item;
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/protocol/FIRSTLINE.java b/1.5.2/src/main/java/com/sun/mail/imap/protocol/FIRSTLINE.java
+index 835ad01..2153421 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/protocol/FIRSTLINE.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/protocol/FIRSTLINE.java
+@@ -7,6 +7,10 @@
+  */
+ package com.sun.mail.imap.protocol;
+ 
++import java.io.ByteArrayInputStream;
++import java.io.IOException;
++import java.nio.charset.Charset;
++
+ import com.sun.mail.iap.*; 
+ 
+ /**
+@@ -19,6 +23,7 @@
+     public int msgno;
+ 
+     public String firstLine;
++    public byte[] firstLineAsBytes;
+ 
+     /**
+      * Constructor
+@@ -29,14 +34,30 @@
+         r.skipSpaces();
+ 
+         // expect data of the form ("the quoted first line \" (maybe with escaped chars in it)")
++        // but note that the summary may be UTF-8 (or a different encoding)
+ 
+         if (r.readByte() != '(')
+             throw new ParsingException("FIRSTLINE parse error");
+ 
+-        // readString() parses a quoted string value and returns null if it fails
+-        firstLine = r.readString();
++        // parse a quoted string value and return null if it fails
++        // readString is ASCII based so use readBytes
++        ByteArrayInputStream bais = r.readBytes();
+ 
+-        if ((firstLine == null) || (r.readByte() != ')'))
++        if ((bais == null) || (r.readByte() != ')'))
+             throw new ParsingException("FIRSTLINE parse error");
++
++        byte arr[] = new byte[bais.available()];
++        try {
++            bais.read(arr);
++        }
++        catch (IOException e) {
++            throw new ParsingException("FIRSTLINE parse error");
++        }
++
++        // this only supports UTF-8
++        firstLine = new String(arr, Charset.forName("UTF-8"));
++
++        // also expose the byte array to allow clients to use different charsets (eg Big5)
++        firstLineAsBytes = arr;
+     }
+ }
+diff --git a/1.5.2/src/main/java/javax/mail/internet/MimeMessage.java b/1.5.2/src/main/java/javax/mail/internet/MimeMessage.java
+index b609271..24d5002 100644
+--- a/1.5.2/src/main/java/javax/mail/internet/MimeMessage.java
++++ b/1.5.2/src/main/java/javax/mail/internet/MimeMessage.java
+@@ -135,9 +135,14 @@
+     protected Flags flags;
+ 
+     /**
+-     * The first line for this message.
++     * The first line for this message as a UTF-8 string.
+      */
+     protected String firstLine;
++
++    /**
++     * The first line for this message as a byte array.
++     */
++    protected byte[] firstLineAsBytes;
+ 
+     /**
+      * A flag indicating whether the message has been modified.
+@@ -2087,7 +2092,8 @@
+ 
+     /**
+      * Return a <code>String</code> object containing the first line for
+-     * this message. <p>
++     * this message. This will be encoded as UTF-8. For non-UTF-8 charsets
++     * use getFirstLineAsBytes.<p>
+      *
+      * @return          String containing the first line of this message
+      *                  (can be null)
+@@ -2098,6 +2104,18 @@
+     }
+ 
+     /**
++     * Return a byte array containing the first line for
++     * this message. <p>
++     *
++     * @return          byte array containing the first line of this message
++     *                  (can be null)
++     * @exception       MessagingException for failures
++     */
++    public synchronized byte[] getFirstLineAsBytes() throws MessagingException {
++    return firstLineAsBytes == null ? null : firstLineAsBytes;
++    }
++
++    /**
+      * Check whether the flag specified in the <code>flag</code>
+      * argument is set in this message. <p>
+      *
