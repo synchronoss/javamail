@@ -135,9 +135,14 @@ public class MimeMessage extends Message implements MimePart {
     protected Flags flags;
 
     /**
-     * The first line for this message.
+     * The first line for this message as a UTF-8 string.
      */
     protected String firstLine;
+
+    /**
+     * The first line for this message as a byte array.
+     */
+    protected byte[] firstLineAsBytes;
 
     /**
      * A flag indicating whether the message has been modified.
@@ -2087,7 +2092,8 @@ public class MimeMessage extends Message implements MimePart {
 
     /**
      * Return a <code>String</code> object containing the first line for
-     * this message. <p>
+     * this message. This will be encoded as UTF-8. For non-UTF-8 charsets
+     * use getFirstLineAsBytes.<p>
      *
      * @return          String containing the first line of this message
      *                  (can be null)
@@ -2095,6 +2101,18 @@ public class MimeMessage extends Message implements MimePart {
      */
     public synchronized String getFirstLine() throws MessagingException {
 	return firstLine == null ? null : firstLine.trim();
+    }
+
+    /**
+     * Return a byte array containing the first line for
+     * this message. <p>
+     *
+     * @return          byte array containing the first line of this message
+     *                  (can be null)
+     * @exception       MessagingException for failures
+     */
+    public synchronized byte[] getFirstLineAsBytes() throws MessagingException {
+    return firstLineAsBytes;
     }
 
     /**
