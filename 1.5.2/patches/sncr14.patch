@@ -1,0 +1,31 @@
+diff --git a/1.5.2/src/main/java/javax/mail/Message.java b/1.5.2/src/main/java/javax/mail/Message.java
+index ba6f896..47e1914 100644
+--- a/1.5.2/src/main/java/javax/mail/Message.java
++++ b/1.5.2/src/main/java/javax/mail/Message.java
+@@ -490,6 +490,14 @@
+     public abstract String getFirstLine() throws MessagingException;
+ 
+     /**
++     * Get the first line of this message as a byte array.
++     *
++     * @return          the message's first line
++     * @exception       MessagingException for failures
++     */
++    public abstract byte[] getFirstLineAsBytes() throws MessagingException;
++
++    /**
+      * Get the date this message was sent.
+      *
+      * @return          the date this message was sent
+diff --git a/1.5.2/src/main/java/javax/mail/internet/MimeMessage.java b/1.5.2/src/main/java/javax/mail/internet/MimeMessage.java
+index e0ce273..a588c48 100644
+--- a/1.5.2/src/main/java/javax/mail/internet/MimeMessage.java
++++ b/1.5.2/src/main/java/javax/mail/internet/MimeMessage.java
+@@ -243,6 +243,7 @@
+    super(source.session);
+    flags = source.getFlags();
+    firstLine = source.getFirstLine();
++   firstLineAsBytes = source.getFirstLineAsBytes();
+    if (flags == null)  // make sure flags is always set
+        flags = new Flags();
+    ByteArrayOutputStream bos;

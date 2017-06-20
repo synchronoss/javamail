@@ -243,6 +243,7 @@ public class MimeMessage extends Message implements MimePart {
 	super(source.session);
 	flags = source.getFlags();
 	firstLine = source.getFirstLine();
+	firstLineAsBytes = source.getFirstLineAsBytes();
 	if (flags == null)	// make sure flags is always set
 	    flags = new Flags();
 	ByteArrayOutputStream bos;
