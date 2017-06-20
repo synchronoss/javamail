@@ -490,6 +490,14 @@ public abstract class Message implements Part {
     public abstract String getFirstLine() throws MessagingException;
 
     /**
+     * Get the first line of this message as a byte array.
+     *
+     * @return          the message's first line
+     * @exception       MessagingException for failures
+     */
+    public abstract byte[] getFirstLineAsBytes() throws MessagingException;
+
+    /**
      * Get the date this message was sent.
      *
      * @return          the date this message was sent
