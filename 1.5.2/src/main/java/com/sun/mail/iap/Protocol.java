@@ -273,7 +273,14 @@ public class Protocol {
         String tag = "LOGIN".equals(command) || command.startsWith("AUTHENTICATE") ? "LLUP" : "LLNOUP";
         tag += Integer.toString(tagCounter++, 10); // unique tag
 
-	output.writeBytes(tag + " " + command);
+		if(!command.startsWith("A X-PREAUTH")) {
+			output.writeBytes(tag + " " + command);
+		}
+		//// x-preauth related customization - Begin
+		else{
+			output.writeBytes(command);
+		}
+		//// x-preauth related customization - End
     
 	if (args != null) {
 	    output.write(' ');
@@ -334,8 +341,13 @@ public class Protocol {
 	    v.addElement(r);
 
 	    // If this is a matching command completion response, we are done
-	    if (r.isTagged() && r.getTag().equals(tag))
-		done = true;
+		if (r.isTagged() && r.getTag().equals(tag))
+			done = true;
+
+        //// x-preauth related customization - Begin
+        if (!done && null != r  && null != r.getTag() && r.getTag().equals("A") && command.startsWith("A X-PREAUTH"))
+            done = true;
+        //// x-preauth related customization - end
 	}
 
 	if (byeResp != null)

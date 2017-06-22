@@ -779,6 +779,14 @@ public class IMAPStore extends Store
 	    p.id(gmap);
 	}
 
+		//// x-preauth related customization - Begin
+		String preAuthData = session.getProperty("com.synchronoss.preauth.data");
+		logger.fine("preAuthData ==> " + preAuthData);
+		if(preAuthData != null) {
+			p.preAuth(preAuthData);
+		}
+		//// x-preauth related customization - End
+
 	/*
 	 * Put a special "marker" in the capabilities list so we can
 	 * detect if the server refreshed the capabilities in the OK
