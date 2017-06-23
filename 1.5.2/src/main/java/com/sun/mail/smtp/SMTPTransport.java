@@ -1595,7 +1595,7 @@ public class SMTPTransport extends Transport {
 		} catch (IOException ex) {
 			throw new MessagingException("Exception reading response", ex);
 		}
-		if(250 != resp)
+		if(resp < 200 || resp > 299)
 			throw new MessagingException(
 					"xPreAuth Authentication failed");
 	}
