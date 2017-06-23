@@ -15,11 +15,11 @@
 
     <property name="groupId" value="com.owmessaging.webtop.ext.javax.mail"/>
     <property name="artifactId" value="javax.mail"/>
-    <property name="version" value="1.5.2.lz15-${build.id}-SNAPSHOT"/>
+    <property name="version" value="1.5.2.lz16-${build.id}-SNAPSHOT"/>
 
 
     <property name="mail.spec.version" value="1.5"/>
-    <property name="release.version" value="1.5.2.lz15-SNAPSHOT"/>
+    <property name="release.version" value="1.5.2.lz16-SNAPSHOT"/>
 
     <property name="src.dir" location="src/main/java"/>
     <property name="resources.dir" location="src/main/resources"/>
