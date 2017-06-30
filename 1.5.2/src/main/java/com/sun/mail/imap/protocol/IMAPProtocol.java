@@ -389,7 +389,7 @@ public class IMAPProtocol extends Protocol {
 	}
     }
 
-	public void xPreAuth(String preAuthData) throws ProtocolException {
+    public void xPreAuth(String preAuthData) throws ProtocolException {
 	    logger.fine("preAuthData ==> " + preAuthData);
 	    Argument args = new Argument();
 	    args.writeString(preAuthData);
@@ -414,7 +414,7 @@ public class IMAPProtocol extends Protocol {
 	    handleResult(r[r.length-1]);
 	    // If the response includes a CAPABILITY response code, process it
 	    setCapabilities(r[r.length-1]);
-	}
+    }
 
     /**
      * LOGIN Command.
