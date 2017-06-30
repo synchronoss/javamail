@@ -702,13 +702,10 @@ public class SMTPTransport extends Transport {
 	    if (!succeed)
 		helo(getLocalHost());
 
-		//// x-preauth related customization - Begin
 		String preAuthData = session.getProperty("com.synchronoss.preauth.data");
-		logger.fine("preAuth ==> " + preAuthData);
 		if(preAuthData != null) {
-			xPreAuth(preAuthData);
+		    xPreAuth(preAuthData);
 		}
-		//// x-preauth related customization - End
 
 	    if (useStartTLS || requireStartTLS) {
 		if (serverSocket instanceof SSLSocket) {
@@ -1562,45 +1559,44 @@ public class SMTPTransport extends Transport {
 	    issueCommand("HELO", 250);
     }
 
-	//// x-preauth related customization - Begin
 	protected void xPreAuth(String preAuthString) throws MessagingException{
-		String cmd = "X-PREAUTH" + " " + preAuthString;
-		sendCommand(cmd);
-		int resp = readServerResponse();
-		BufferedReader rd =
-				new BufferedReader(new StringReader(lastServerResponse));
-		String line;
-		extMap = new Hashtable();
-		try {
-			boolean first = true;
-			while ((line = rd.readLine()) != null) {
-				if (first) {	// skip first line which is the greeting
-					first = false;
-					continue;
-				}
-				if (line.length() < 5)
-					continue;		// shouldn't happen
-				line = line.substring(4);	// skip response code
-				int i = line.indexOf(' ');
-				String arg = "";
-				if (i > 0) {
-					arg = line.substring(i + 1);
-					line = line.substring(0, i);
-				}
-				if (logger.isLoggable(Level.FINE))
-					logger.fine("Found extension \"" +
-							line + "\", arg \"" + arg + "\"");
-				extMap.put(line.toUpperCase(Locale.ENGLISH), arg);
-			}
-		} catch (IOException ex) {
-			throw new MessagingException("Exception reading response", ex);
-		}
-		if(resp < 200 || resp > 299)
-			throw new MessagingException(
-					"xPreAuth Authentication failed");
+        logger.fine("preAuth ==> " + preAuthString);
+        String cmd = "X-PREAUTH" + " " + preAuthString;
+        sendCommand(cmd);
+        int resp = readServerResponse();
+        BufferedReader rd =
+                new BufferedReader(new StringReader(lastServerResponse));
+        String line;
+        extMap = new Hashtable();
+        try {
+            boolean first = true;
+            while ((line = rd.readLine()) != null) {
+                if (first) {	// skip first line which is the greeting
+                    first = false;
+                    continue;
+                }
+                if (line.length() < 5)
+                    continue;		// shouldn't happen
+                line = line.substring(4);	// skip response code
+                int i = line.indexOf(' ');
+                String arg = "";
+                if (i > 0) {
+                    arg = line.substring(i + 1);
+                    line = line.substring(0, i);
+                }
+                if (logger.isLoggable(Level.FINE))
+                    logger.fine("Found extension \"" +
+                            line + "\", arg \"" + arg + "\"");
+                extMap.put(line.toUpperCase(Locale.ENGLISH), arg);
+            }
+        } catch (IOException ex) {
+            throw new MessagingException("Exception reading response", ex);
+        }
+        if(resp < 200 || resp > 299)
+            throw new MessagingException(
+                    "xPreAuth Authentication failed");
 	}
 
-	//// x-preauth related customization - End
 
     /**
      * Issue the <code>EHLO</code> command.

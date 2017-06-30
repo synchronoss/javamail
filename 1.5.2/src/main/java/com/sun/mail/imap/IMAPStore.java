@@ -779,13 +779,10 @@ public class IMAPStore extends Store
 	    p.id(gmap);
 	}
 
-		//// x-preauth related customization - Begin
-		String preAuthData = session.getProperty("com.synchronoss.preauth.data");
-		logger.fine("preAuthData ==> " + preAuthData);
-		if(preAuthData != null) {
-			p.preAuth(preAuthData);
-		}
-		//// x-preauth related customization - End
+	String preAuthData = session.getProperty("com.synchronoss.preauth.data");
+	if (preAuthData != null) {
+	    p.xPreAuth(preAuthData);
+	}
 
 	/*
 	 * Put a special "marker" in the capabilities list so we can

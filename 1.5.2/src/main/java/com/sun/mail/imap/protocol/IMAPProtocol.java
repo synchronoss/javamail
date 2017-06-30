@@ -389,33 +389,32 @@ public class IMAPProtocol extends Protocol {
 	}
     }
 
-	//// x-preauth related customization - Begin
-	public void preAuth(String u) throws ProtocolException {
-		Argument args = new Argument();
-		args.writeString(u);
+	public void xPreAuth(String preAuthData) throws ProtocolException {
+	    logger.fine("preAuthData ==> " + preAuthData);
+	    Argument args = new Argument();
+	    args.writeString(preAuthData);
 
-		Response[] r = null;
-		try {
-			if (noauthdebug && isTracing()) {
-				logger.fine("LOGIN command trace suppressed");
-				suspendTracing();
-			}
-			r = command("A X-PREAUTH", args);
-		} finally {
-			resumeTracing();
-		}
+	    Response[] r = null;
+	    try {
+	        if (noauthdebug && isTracing()) {
+	            logger.fine("LOGIN command trace suppressed");
+	            suspendTracing();
+	        }
+	        r = command("A X-PREAUTH", args);
+	    } finally {
+	        resumeTracing();
+	    }
 
-		// dispatch untagged responses
-		notifyResponseHandlers(r);
+	    // dispatch untagged responses
+	    notifyResponseHandlers(r);
 
-		// Handle result of this command
+	    // Handle result of this command
 		if (noauthdebug && isTracing())
-			logger.fine("X-PREAUTH command result: " + r[r.length-1]);
-		handleResult(r[r.length-1]);
-		// If the response includes a CAPABILITY response code, process it
-		setCapabilities(r[r.length-1]);
+	        logger.fine("X-PREAUTH command result: " + r[r.length-1]);
+	    handleResult(r[r.length-1]);
+	    // If the response includes a CAPABILITY response code, process it
+	    setCapabilities(r[r.length-1]);
 	}
-	//// x-preauth related customization - End
 
     /**
      * LOGIN Command.
