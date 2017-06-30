@@ -1577,17 +1577,17 @@ public class SMTPTransport extends Transport {
 		}
 		if (line.length() < 5)
 		    continue;		// shouldn't happen
-		    line = line.substring(4);	// skip response code
-		    int i = line.indexOf(' ');
-		    String arg = "";
-		    if (i > 0) {
-			arg = line.substring(i + 1);
-			line = line.substring(0, i);
-		    }
-		    if (logger.isLoggable(Level.FINE))
-			logger.fine("Found extension \"" +
-					    line + "\", arg \"" + arg + "\"");
-			extMap.put(line.toUpperCase(Locale.ENGLISH), arg);
+		line = line.substring(4);	// skip response code
+		int i = line.indexOf(' ');
+		String arg = "";
+		if (i > 0) {
+		    arg = line.substring(i + 1);
+		    line = line.substring(0, i);
+		}
+		if (logger.isLoggable(Level.FINE))
+		    logger.fine("Found extension \"" +
+				    line + "\", arg \"" + arg + "\"");
+		extMap.put(line.toUpperCase(Locale.ENGLISH), arg);
 	    }
 	} catch (IOException ex) {
 	    throw new MessagingException("Exception reading response", ex);
