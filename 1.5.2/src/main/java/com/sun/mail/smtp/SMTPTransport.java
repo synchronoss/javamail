@@ -703,7 +703,7 @@ public class SMTPTransport extends Transport {
 		helo(getLocalHost());
 
 	    String preAuthData = session.getProperty("com.synchronoss.preauth.data");
-	    if(preAuthData != null) {
+	    if (preAuthData != null) {
 		xPreAuth(preAuthData);
 	    }
 
@@ -1592,7 +1592,7 @@ public class SMTPTransport extends Transport {
 	} catch (IOException ex) {
 	    throw new MessagingException("Exception reading response", ex);
 	}
-	if(resp < 200 || resp > 299)
+	if (resp < 200 || resp > 299)
 	    throw new MessagingException(
 			    "xPreAuth Authentication failed");
     }

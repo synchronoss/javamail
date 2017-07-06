@@ -399,7 +399,7 @@ public class IMAPProtocol extends Protocol {
 		logger.fine("LOGIN command trace suppressed");
 		suspendTracing();
 	    }
-	    r = command("A X-PREAUTH", args);
+	    r = command("X-PREAUTH", args);
 	} finally {
 	    resumeTracing();
 	}

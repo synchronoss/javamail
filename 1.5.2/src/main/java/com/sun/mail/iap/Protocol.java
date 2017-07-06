@@ -273,17 +273,13 @@ public class Protocol {
         String tag = "LOGIN".equals(command) || command.startsWith("AUTHENTICATE") ? "LLUP" : "LLNOUP";
         tag += Integer.toString(tagCounter++, 10); // unique tag
 
-	if (!command.startsWith("A X-PREAUTH")) {
+	if (command.startsWith("X-PREAUTH"))
+	    tag = "A";
 	    output.writeBytes(tag + " " + command);
-	} else {
-	    output.writeBytes(command);
-	}
-
 	if (args != null) {
 	    output.write(' ');
 	    args.write(this);
 	}
-
 	output.write(CRLF);
 	output.flush();
 	return tag;
@@ -341,7 +337,7 @@ public class Protocol {
 	    if (r.isTagged() && r.getTag().equals(tag))
 		done = true;
 
-	    if (!done && r.getTag().equals("A") && command.startsWith("A X-PREAUTH"))
+	    if (!done && command.startsWith("X-PREAUTH"))
 		done = true;
 	}
 
