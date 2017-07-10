@@ -275,11 +275,13 @@ public class Protocol {
 
 	if (command.startsWith("X-PREAUTH"))
 	    tag = "A";
-	    output.writeBytes(tag + " " + command);
+	output.writeBytes(tag + " " + command);
+
 	if (args != null) {
 	    output.write(' ');
 	    args.write(this);
 	}
+
 	output.write(CRLF);
 	output.flush();
 	return tag;
@@ -335,9 +337,6 @@ public class Protocol {
 
 	    // If this is a matching command completion response, we are done
 	    if (r.isTagged() && r.getTag().equals(tag))
-		done = true;
-
-	    if (!done && command.startsWith("X-PREAUTH"))
 		done = true;
 	}
 
