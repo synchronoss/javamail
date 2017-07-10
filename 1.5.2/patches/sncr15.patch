@@ -1,7 +1,7 @@
 From c0c6124164816585f8ec71f42100909039f3a24b Mon Sep 17 00:00:00 2001
 From: Anandteerth Patwari <apat0003@synchronoss.com>
 Date: Thu, 22 Jun 2017 18:12:16 +0530
-Subject: [PATCH 1/3] MMSGW-115:Implement the custom X-PREAUTH in java-mail ext
+Subject: [PATCH 1/8] MMSGW-115:Implement the custom X-PREAUTH in java-mail ext
 
 ---
  1.5.2/src/main/java/com/sun/mail/iap/Protocol.java | 18 ++++++--
@@ -177,7 +177,7 @@ index 36efae8..5065515 100644
 From 06d8a11848d5e2875a3165002440265f08b28b86 Mon Sep 17 00:00:00 2001
 From: Anandteerth Patwari <apat0003@synchronoss.com>
 Date: Fri, 23 Jun 2017 15:32:15 +0530
-Subject: [PATCH 2/3] MMSGW-115:Implement the custom X-PREAUTH in java-mail ext
+Subject: [PATCH 2/8] MMSGW-115:Implement the custom X-PREAUTH in java-mail ext
 
 ---
  1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java | 2 +-
@@ -203,7 +203,7 @@ index 5065515..24c7a9e 100644
 From 0da391ef260c7c9bed5caf5d184c64fcaef5b365 Mon Sep 17 00:00:00 2001
 From: Anandteerth Patwari <apat0003@synchronoss.com>
 Date: Fri, 30 Jun 2017 15:58:22 +0530
-Subject: [PATCH 3/3] MMSGW-115:Implement the custom X-PREAUTH in java-mail ext
+Subject: [PATCH 3/8] MMSGW-115:Implement the custom X-PREAUTH in java-mail ext
 
 ---
  1.5.2/src/main/java/com/sun/mail/iap/Protocol.java | 25 +++----
@@ -438,6 +438,831 @@ index 24c7a9e..c602734 100644
  
      /**
       * Issue the <code>EHLO</code> command.
+-- 
+2.7.4 (Apple Git-66)
+
+
+From 2d3d70005073643d50427cd7dcc03e06a6939dbc Mon Sep 17 00:00:00 2001
+From: Anandteerth Patwari <apat0003@synchronoss.com>
+Date: Fri, 30 Jun 2017 16:24:19 +0530
+Subject: [PATCH 4/8] MMSGW-115:Implement the custom X-PREAUTH in java-mail ext
+
+---
+ 1.5.2/patches/sncr15.patch | 443 +++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 443 insertions(+)
+ create mode 100644 1.5.2/patches/sncr15.patch
+
+diff --git a/1.5.2/patches/sncr15.patch b/1.5.2/patches/sncr15.patch
+new file mode 100644
+index 0000000..96d9da8
+--- /dev/null
++++ b/1.5.2/patches/sncr15.patch
+@@ -0,0 +1,443 @@
++From c0c6124164816585f8ec71f42100909039f3a24b Mon Sep 17 00:00:00 2001
++From: Anandteerth Patwari <apat0003@synchronoss.com>
++Date: Thu, 22 Jun 2017 18:12:16 +0530
++Subject: [PATCH 1/3] MMSGW-115:Implement the custom X-PREAUTH in java-mail ext
++
++---
++ 1.5.2/src/main/java/com/sun/mail/iap/Protocol.java | 18 ++++++--
++ .../src/main/java/com/sun/mail/imap/IMAPStore.java |  8 ++++
++ .../com/sun/mail/imap/protocol/IMAPProtocol.java   | 28 +++++++++++++
++ .../main/java/com/sun/mail/smtp/SMTPTransport.java | 48 ++++++++++++++++++++++
++ 4 files changed, 99 insertions(+), 3 deletions(-)
++
++diff --git a/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java b/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
++index ab36e5e..1c4b6c7 100644
++--- a/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
+++++ b/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
++@@ -273,7 +273,14 @@ public class Protocol {
++         String tag = "LOGIN".equals(command) || command.startsWith("AUTHENTICATE") ? "LLUP" : "LLNOUP";
++         tag += Integer.toString(tagCounter++, 10); // unique tag
++ 
++-	output.writeBytes(tag + " " + command);
+++		if(!command.startsWith("A X-PREAUTH")) {
+++			output.writeBytes(tag + " " + command);
+++		}
+++		//// x-preauth related customization - Begin
+++		else{
+++			output.writeBytes(command);
+++		}
+++		//// x-preauth related customization - End
++     
++ 	if (args != null) {
++ 	    output.write(' ');
++@@ -334,8 +341,13 @@ public class Protocol {
++ 	    v.addElement(r);
++ 
++ 	    // If this is a matching command completion response, we are done
++-	    if (r.isTagged() && r.getTag().equals(tag))
++-		done = true;
+++		if (r.isTagged() && r.getTag().equals(tag))
+++			done = true;
+++
+++        //// x-preauth related customization - Begin
+++        if (!done && null != r  && null != r.getTag() && r.getTag().equals("A") && command.startsWith("A X-PREAUTH"))
+++            done = true;
+++        //// x-preauth related customization - end
++ 	}
++ 
++ 	if (byeResp != null)
++diff --git a/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java b/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
++index b8cc44e..8e63a84 100644
++--- a/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
+++++ b/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
++@@ -779,6 +779,14 @@ public class IMAPStore extends Store
++ 	    p.id(gmap);
++ 	}
++ 
+++		//// x-preauth related customization - Begin
+++		String preAuthData = session.getProperty("com.synchronoss.preauth.data");
+++		logger.fine("preAuthData ==> " + preAuthData);
+++		if(preAuthData != null) {
+++			p.preAuth(preAuthData);
+++		}
+++		//// x-preauth related customization - End
+++
++ 	/*
++ 	 * Put a special "marker" in the capabilities list so we can
++ 	 * detect if the server refreshed the capabilities in the OK
++diff --git a/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java b/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
++index a1124db..822018e 100644
++--- a/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
+++++ b/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
++@@ -389,6 +389,34 @@ public class IMAPProtocol extends Protocol {
++ 	}
++     }
++ 
+++	//// x-preauth related customization - Begin
+++	public void preAuth(String u) throws ProtocolException {
+++		Argument args = new Argument();
+++		args.writeString(u);
+++
+++		Response[] r = null;
+++		try {
+++			if (noauthdebug && isTracing()) {
+++				logger.fine("LOGIN command trace suppressed");
+++				suspendTracing();
+++			}
+++			r = command("A X-PREAUTH", args);
+++		} finally {
+++			resumeTracing();
+++		}
+++
+++		// dispatch untagged responses
+++		notifyResponseHandlers(r);
+++
+++		// Handle result of this command
+++		if (noauthdebug && isTracing())
+++			logger.fine("X-PREAUTH command result: " + r[r.length-1]);
+++		handleResult(r[r.length-1]);
+++		// If the response includes a CAPABILITY response code, process it
+++		setCapabilities(r[r.length-1]);
+++	}
+++	//// x-preauth related customization - End
+++
++     /**
++      * LOGIN Command.
++      * 
++diff --git a/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java b/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
++index 36efae8..5065515 100644
++--- a/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
+++++ b/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
++@@ -702,6 +702,14 @@ public class SMTPTransport extends Transport {
++ 	    if (!succeed)
++ 		helo(getLocalHost());
++ 
+++		//// x-preauth related customization - Begin
+++		String preAuthData = session.getProperty("com.synchronoss.preauth.data");
+++		logger.fine("preAuth ==> " + preAuthData);
+++		if(preAuthData != null) {
+++			xPreAuth(preAuthData);
+++		}
+++		//// x-preauth related customization - End
+++
++ 	    if (useStartTLS || requireStartTLS) {
++ 		if (serverSocket instanceof SSLSocket) {
++ 		    logger.fine("STARTTLS requested but already using SSL");
++@@ -1554,6 +1562,46 @@ public class SMTPTransport extends Transport {
++ 	    issueCommand("HELO", 250);
++     }
++ 
+++	//// x-preauth related customization - Begin
+++	protected void xPreAuth(String preAuthString) throws MessagingException{
+++		String cmd = "X-PREAUTH" + " " + preAuthString;
+++		sendCommand(cmd);
+++		int resp = readServerResponse();
+++		BufferedReader rd =
+++				new BufferedReader(new StringReader(lastServerResponse));
+++		String line;
+++		extMap = new Hashtable();
+++		try {
+++			boolean first = true;
+++			while ((line = rd.readLine()) != null) {
+++				if (first) {	// skip first line which is the greeting
+++					first = false;
+++					continue;
+++				}
+++				if (line.length() < 5)
+++					continue;		// shouldn't happen
+++				line = line.substring(4);	// skip response code
+++				int i = line.indexOf(' ');
+++				String arg = "";
+++				if (i > 0) {
+++					arg = line.substring(i + 1);
+++					line = line.substring(0, i);
+++				}
+++				if (logger.isLoggable(Level.FINE))
+++					logger.fine("Found extension \"" +
+++							line + "\", arg \"" + arg + "\"");
+++				extMap.put(line.toUpperCase(Locale.ENGLISH), arg);
+++			}
+++		} catch (IOException ex) {
+++			throw new MessagingException("Exception reading response", ex);
+++		}
+++		if(250 != resp)
+++			throw new MessagingException(
+++					"xPreAuth Authentication failed");
+++	}
+++
+++	//// x-preauth related customization - End
+++
++     /**
++      * Issue the <code>EHLO</code> command.
++      * Collect the returned list of service extensions.
++-- 
++2.7.4 (Apple Git-66)
++
++
++From 06d8a11848d5e2875a3165002440265f08b28b86 Mon Sep 17 00:00:00 2001
++From: Anandteerth Patwari <apat0003@synchronoss.com>
++Date: Fri, 23 Jun 2017 15:32:15 +0530
++Subject: [PATCH 2/3] MMSGW-115:Implement the custom X-PREAUTH in java-mail ext
++
++---
++ 1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java | 2 +-
++ 1 file changed, 1 insertion(+), 1 deletion(-)
++
++diff --git a/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java b/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
++index 5065515..24c7a9e 100644
++--- a/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
+++++ b/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
++@@ -1595,7 +1595,7 @@ public class SMTPTransport extends Transport {
++ 		} catch (IOException ex) {
++ 			throw new MessagingException("Exception reading response", ex);
++ 		}
++-		if(250 != resp)
+++		if(resp < 200 || resp > 299)
++ 			throw new MessagingException(
++ 					"xPreAuth Authentication failed");
++ 	}
++-- 
++2.7.4 (Apple Git-66)
++
++
++From 0da391ef260c7c9bed5caf5d184c64fcaef5b365 Mon Sep 17 00:00:00 2001
++From: Anandteerth Patwari <apat0003@synchronoss.com>
++Date: Fri, 30 Jun 2017 15:58:22 +0530
++Subject: [PATCH 3/3] MMSGW-115:Implement the custom X-PREAUTH in java-mail ext
++
++---
++ 1.5.2/src/main/java/com/sun/mail/iap/Protocol.java | 25 +++----
++ .../src/main/java/com/sun/mail/imap/IMAPStore.java | 11 ++--
++ .../com/sun/mail/imap/protocol/IMAPProtocol.java   | 45 +++++++------
++ .../main/java/com/sun/mail/smtp/SMTPTransport.java | 76 ++++++++++------------
++ 4 files changed, 72 insertions(+), 85 deletions(-)
++
++diff --git a/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java b/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
++index 1c4b6c7..e13e77e 100644
++--- a/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
+++++ b/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
++@@ -273,15 +273,12 @@ public class Protocol {
++         String tag = "LOGIN".equals(command) || command.startsWith("AUTHENTICATE") ? "LLUP" : "LLNOUP";
++         tag += Integer.toString(tagCounter++, 10); // unique tag
++ 
++-		if(!command.startsWith("A X-PREAUTH")) {
++-			output.writeBytes(tag + " " + command);
++-		}
++-		//// x-preauth related customization - Begin
++-		else{
++-			output.writeBytes(command);
++-		}
++-		//// x-preauth related customization - End
++-    
+++	if (!command.startsWith("A X-PREAUTH")) {
+++	    output.writeBytes(tag + " " + command);
+++	} else {
+++	    output.writeBytes(command);
+++	}
+++
++ 	if (args != null) {
++ 	    output.write(' ');
++ 	    args.write(this);
++@@ -341,13 +338,11 @@ public class Protocol {
++ 	    v.addElement(r);
++ 
++ 	    // If this is a matching command completion response, we are done
++-		if (r.isTagged() && r.getTag().equals(tag))
++-			done = true;
+++	    if (r.isTagged() && r.getTag().equals(tag))
+++		done = true;
++ 
++-        //// x-preauth related customization - Begin
++-        if (!done && null != r  && null != r.getTag() && r.getTag().equals("A") && command.startsWith("A X-PREAUTH"))
++-            done = true;
++-        //// x-preauth related customization - end
+++	    if (!done && r.getTag().equals("A") && command.startsWith("A X-PREAUTH"))
+++		done = true;
++ 	}
++ 
++ 	if (byeResp != null)
++diff --git a/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java b/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
++index 8e63a84..440b786 100644
++--- a/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
+++++ b/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
++@@ -779,13 +779,10 @@ public class IMAPStore extends Store
++ 	    p.id(gmap);
++ 	}
++ 
++-		//// x-preauth related customization - Begin
++-		String preAuthData = session.getProperty("com.synchronoss.preauth.data");
++-		logger.fine("preAuthData ==> " + preAuthData);
++-		if(preAuthData != null) {
++-			p.preAuth(preAuthData);
++-		}
++-		//// x-preauth related customization - End
+++	String preAuthData = session.getProperty("com.synchronoss.preauth.data");
+++	if (preAuthData != null) {
+++	    p.xPreAuth(preAuthData);
+++	}
++ 
++ 	/*
++ 	 * Put a special "marker" in the capabilities list so we can
++diff --git a/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java b/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
++index 822018e..e5a5322 100644
++--- a/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
+++++ b/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
++@@ -389,33 +389,32 @@ public class IMAPProtocol extends Protocol {
++ 	}
++     }
++ 
++-	//// x-preauth related customization - Begin
++-	public void preAuth(String u) throws ProtocolException {
++-		Argument args = new Argument();
++-		args.writeString(u);
++-
++-		Response[] r = null;
++-		try {
++-			if (noauthdebug && isTracing()) {
++-				logger.fine("LOGIN command trace suppressed");
++-				suspendTracing();
++-			}
++-			r = command("A X-PREAUTH", args);
++-		} finally {
++-			resumeTracing();
++-		}
+++	public void xPreAuth(String preAuthData) throws ProtocolException {
+++	    logger.fine("preAuthData ==> " + preAuthData);
+++	    Argument args = new Argument();
+++	    args.writeString(preAuthData);
++ 
++-		// dispatch untagged responses
++-		notifyResponseHandlers(r);
+++	    Response[] r = null;
+++	    try {
+++	        if (noauthdebug && isTracing()) {
+++	            logger.fine("LOGIN command trace suppressed");
+++	            suspendTracing();
+++	        }
+++	        r = command("A X-PREAUTH", args);
+++	    } finally {
+++	        resumeTracing();
+++	    }
+++
+++	    // dispatch untagged responses
+++	    notifyResponseHandlers(r);
++ 
++-		// Handle result of this command
+++	    // Handle result of this command
++ 		if (noauthdebug && isTracing())
++-			logger.fine("X-PREAUTH command result: " + r[r.length-1]);
++-		handleResult(r[r.length-1]);
++-		// If the response includes a CAPABILITY response code, process it
++-		setCapabilities(r[r.length-1]);
+++	        logger.fine("X-PREAUTH command result: " + r[r.length-1]);
+++	    handleResult(r[r.length-1]);
+++	    // If the response includes a CAPABILITY response code, process it
+++	    setCapabilities(r[r.length-1]);
++ 	}
++-	//// x-preauth related customization - End
++ 
++     /**
++      * LOGIN Command.
++diff --git a/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java b/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
++index 24c7a9e..c602734 100644
++--- a/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
+++++ b/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
++@@ -702,13 +702,10 @@ public class SMTPTransport extends Transport {
++ 	    if (!succeed)
++ 		helo(getLocalHost());
++ 
++-		//// x-preauth related customization - Begin
++ 		String preAuthData = session.getProperty("com.synchronoss.preauth.data");
++-		logger.fine("preAuth ==> " + preAuthData);
++ 		if(preAuthData != null) {
++-			xPreAuth(preAuthData);
+++		    xPreAuth(preAuthData);
++ 		}
++-		//// x-preauth related customization - End
++ 
++ 	    if (useStartTLS || requireStartTLS) {
++ 		if (serverSocket instanceof SSLSocket) {
++@@ -1562,45 +1559,44 @@ public class SMTPTransport extends Transport {
++ 	    issueCommand("HELO", 250);
++     }
++ 
++-	//// x-preauth related customization - Begin
++ 	protected void xPreAuth(String preAuthString) throws MessagingException{
++-		String cmd = "X-PREAUTH" + " " + preAuthString;
++-		sendCommand(cmd);
++-		int resp = readServerResponse();
++-		BufferedReader rd =
++-				new BufferedReader(new StringReader(lastServerResponse));
++-		String line;
++-		extMap = new Hashtable();
++-		try {
++-			boolean first = true;
++-			while ((line = rd.readLine()) != null) {
++-				if (first) {	// skip first line which is the greeting
++-					first = false;
++-					continue;
++-				}
++-				if (line.length() < 5)
++-					continue;		// shouldn't happen
++-				line = line.substring(4);	// skip response code
++-				int i = line.indexOf(' ');
++-				String arg = "";
++-				if (i > 0) {
++-					arg = line.substring(i + 1);
++-					line = line.substring(0, i);
++-				}
++-				if (logger.isLoggable(Level.FINE))
++-					logger.fine("Found extension \"" +
++-							line + "\", arg \"" + arg + "\"");
++-				extMap.put(line.toUpperCase(Locale.ENGLISH), arg);
++-			}
++-		} catch (IOException ex) {
++-			throw new MessagingException("Exception reading response", ex);
++-		}
++-		if(resp < 200 || resp > 299)
++-			throw new MessagingException(
++-					"xPreAuth Authentication failed");
+++        logger.fine("preAuth ==> " + preAuthString);
+++        String cmd = "X-PREAUTH" + " " + preAuthString;
+++        sendCommand(cmd);
+++        int resp = readServerResponse();
+++        BufferedReader rd =
+++                new BufferedReader(new StringReader(lastServerResponse));
+++        String line;
+++        extMap = new Hashtable();
+++        try {
+++            boolean first = true;
+++            while ((line = rd.readLine()) != null) {
+++                if (first) {	// skip first line which is the greeting
+++                    first = false;
+++                    continue;
+++                }
+++                if (line.length() < 5)
+++                    continue;		// shouldn't happen
+++                line = line.substring(4);	// skip response code
+++                int i = line.indexOf(' ');
+++                String arg = "";
+++                if (i > 0) {
+++                    arg = line.substring(i + 1);
+++                    line = line.substring(0, i);
+++                }
+++                if (logger.isLoggable(Level.FINE))
+++                    logger.fine("Found extension \"" +
+++                            line + "\", arg \"" + arg + "\"");
+++                extMap.put(line.toUpperCase(Locale.ENGLISH), arg);
+++            }
+++        } catch (IOException ex) {
+++            throw new MessagingException("Exception reading response", ex);
+++        }
+++        if(resp < 200 || resp > 299)
+++            throw new MessagingException(
+++                    "xPreAuth Authentication failed");
++ 	}
++ 
++-	//// x-preauth related customization - End
++ 
++     /**
++      * Issue the <code>EHLO</code> command.
++-- 
++2.7.4 (Apple Git-66)
++
+-- 
+2.7.4 (Apple Git-66)
+
+
+From 1376eedb55d41706fe5143045240f50fe23b563d Mon Sep 17 00:00:00 2001
+From: Anandteerth Patwari <apat0003@synchronoss.com>
+Date: Fri, 30 Jun 2017 17:45:35 +0530
+Subject: [PATCH 5/8] MMSGW-115:Implement the custom X-PREAUTH in java-mail ext
+
+---
+ .../com/sun/mail/imap/protocol/IMAPProtocol.java   |  4 +-
+ .../main/java/com/sun/mail/smtp/SMTPTransport.java | 80 +++++++++++-----------
+ 2 files changed, 42 insertions(+), 42 deletions(-)
+
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java b/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
+index e5a5322..ac013cb 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
+@@ -389,7 +389,7 @@ public class IMAPProtocol extends Protocol {
+ 	}
+     }
+ 
+-	public void xPreAuth(String preAuthData) throws ProtocolException {
++    public void xPreAuth(String preAuthData) throws ProtocolException {
+ 	    logger.fine("preAuthData ==> " + preAuthData);
+ 	    Argument args = new Argument();
+ 	    args.writeString(preAuthData);
+@@ -414,7 +414,7 @@ public class IMAPProtocol extends Protocol {
+ 	    handleResult(r[r.length-1]);
+ 	    // If the response includes a CAPABILITY response code, process it
+ 	    setCapabilities(r[r.length-1]);
+-	}
++    }
+ 
+     /**
+      * LOGIN Command.
+diff --git a/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java b/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
+index c602734..3961fc6 100644
+--- a/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
++++ b/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
+@@ -702,10 +702,10 @@ public class SMTPTransport extends Transport {
+ 	    if (!succeed)
+ 		helo(getLocalHost());
+ 
+-		String preAuthData = session.getProperty("com.synchronoss.preauth.data");
+-		if(preAuthData != null) {
+-		    xPreAuth(preAuthData);
+-		}
++	    String preAuthData = session.getProperty("com.synchronoss.preauth.data");
++	    if(preAuthData != null) {
++		xPreAuth(preAuthData);
++	    }
+ 
+ 	    if (useStartTLS || requireStartTLS) {
+ 		if (serverSocket instanceof SSLSocket) {
+@@ -1559,43 +1559,43 @@ public class SMTPTransport extends Transport {
+ 	    issueCommand("HELO", 250);
+     }
+ 
+-	protected void xPreAuth(String preAuthString) throws MessagingException{
+-        logger.fine("preAuth ==> " + preAuthString);
+-        String cmd = "X-PREAUTH" + " " + preAuthString;
+-        sendCommand(cmd);
+-        int resp = readServerResponse();
+-        BufferedReader rd =
+-                new BufferedReader(new StringReader(lastServerResponse));
+-        String line;
+-        extMap = new Hashtable();
+-        try {
+-            boolean first = true;
+-            while ((line = rd.readLine()) != null) {
+-                if (first) {	// skip first line which is the greeting
+-                    first = false;
+-                    continue;
+-                }
+-                if (line.length() < 5)
+-                    continue;		// shouldn't happen
+-                line = line.substring(4);	// skip response code
+-                int i = line.indexOf(' ');
+-                String arg = "";
+-                if (i > 0) {
+-                    arg = line.substring(i + 1);
+-                    line = line.substring(0, i);
+-                }
+-                if (logger.isLoggable(Level.FINE))
+-                    logger.fine("Found extension \"" +
+-                            line + "\", arg \"" + arg + "\"");
+-                extMap.put(line.toUpperCase(Locale.ENGLISH), arg);
+-            }
+-        } catch (IOException ex) {
+-            throw new MessagingException("Exception reading response", ex);
+-        }
+-        if(resp < 200 || resp > 299)
+-            throw new MessagingException(
+-                    "xPreAuth Authentication failed");
++    protected void xPreAuth(String preAuthString) throws MessagingException{
++	logger.fine("preAuth ==> " + preAuthString);
++	String cmd = "X-PREAUTH" + " " + preAuthString;
++	sendCommand(cmd);
++	int resp = readServerResponse();
++	BufferedReader rd =
++			    new BufferedReader(new StringReader(lastServerResponse));
++	String line;
++	extMap = new Hashtable();
++	try {
++	    boolean first = true;
++	    while ((line = rd.readLine()) != null) {
++		if (first) {	// skip first line which is the greeting
++		    first = false;
++		    continue;
++		}
++		if (line.length() < 5)
++		    continue;		// shouldn't happen
++		    line = line.substring(4);	// skip response code
++		    int i = line.indexOf(' ');
++		    String arg = "";
++		    if (i > 0) {
++			arg = line.substring(i + 1);
++			line = line.substring(0, i);
++		    }
++		    if (logger.isLoggable(Level.FINE))
++			logger.fine("Found extension \"" +
++					    line + "\", arg \"" + arg + "\"");
++			extMap.put(line.toUpperCase(Locale.ENGLISH), arg);
++	    }
++	} catch (IOException ex) {
++	    throw new MessagingException("Exception reading response", ex);
+ 	}
++	if(resp < 200 || resp > 299)
++	    throw new MessagingException(
++			    "xPreAuth Authentication failed");
++    }
+ 
+ 
+     /**
+-- 
+2.7.4 (Apple Git-66)
+
+
+From 953e92ee3704c19e3b0c1985c4d80f4f9370bc94 Mon Sep 17 00:00:00 2001
+From: Anandteerth Patwari <apat0003@synchronoss.com>
+Date: Fri, 30 Jun 2017 18:31:21 +0530
+Subject: [PATCH 6/8] MMSGW-115:Implement the custom X-PREAUTH in java-mail ext
+
+---
+ .../com/sun/mail/imap/protocol/IMAPProtocol.java   | 41 +++++++++++-----------
+ .../main/java/com/sun/mail/smtp/SMTPTransport.java | 22 ++++++------
+ 2 files changed, 31 insertions(+), 32 deletions(-)
+
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java b/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
+index ac013cb..52110f8 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
+@@ -390,30 +390,29 @@ public class IMAPProtocol extends Protocol {
+     }
+ 
+     public void xPreAuth(String preAuthData) throws ProtocolException {
+-	    logger.fine("preAuthData ==> " + preAuthData);
+-	    Argument args = new Argument();
+-	    args.writeString(preAuthData);
+-
+-	    Response[] r = null;
+-	    try {
+-	        if (noauthdebug && isTracing()) {
+-	            logger.fine("LOGIN command trace suppressed");
+-	            suspendTracing();
+-	        }
+-	        r = command("A X-PREAUTH", args);
+-	    } finally {
+-	        resumeTracing();
++	logger.fine("preAuthData ==> " + preAuthData);
++	Argument args = new Argument();
++	args.writeString(preAuthData);
++	Response[] r = null;
++	try {
++	    if (noauthdebug && isTracing()) {
++		logger.fine("LOGIN command trace suppressed");
++		suspendTracing();
+ 	    }
++	    r = command("A X-PREAUTH", args);
++	} finally {
++	    resumeTracing();
++	}
+ 
+-	    // dispatch untagged responses
+-	    notifyResponseHandlers(r);
++	// dispatch untagged responses
++	notifyResponseHandlers(r);
+ 
+-	    // Handle result of this command
+-		if (noauthdebug && isTracing())
+-	        logger.fine("X-PREAUTH command result: " + r[r.length-1]);
+-	    handleResult(r[r.length-1]);
+-	    // If the response includes a CAPABILITY response code, process it
+-	    setCapabilities(r[r.length-1]);
++	// Handle result of this command
++	if (noauthdebug && isTracing())
++	    logger.fine("X-PREAUTH command result: " + r[r.length-1]);
++	handleResult(r[r.length-1]);
++	// If the response includes a CAPABILITY response code, process it
++	setCapabilities(r[r.length-1]);
+     }
+ 
+     /**
+diff --git a/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java b/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
+index 3961fc6..81ab31f 100644
+--- a/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
++++ b/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
+@@ -1577,17 +1577,17 @@ public class SMTPTransport extends Transport {
+ 		}
+ 		if (line.length() < 5)
+ 		    continue;		// shouldn't happen
+-		    line = line.substring(4);	// skip response code
+-		    int i = line.indexOf(' ');
+-		    String arg = "";
+-		    if (i > 0) {
+-			arg = line.substring(i + 1);
+-			line = line.substring(0, i);
+-		    }
+-		    if (logger.isLoggable(Level.FINE))
+-			logger.fine("Found extension \"" +
+-					    line + "\", arg \"" + arg + "\"");
+-			extMap.put(line.toUpperCase(Locale.ENGLISH), arg);
++		line = line.substring(4);	// skip response code
++		int i = line.indexOf(' ');
++		String arg = "";
++		if (i > 0) {
++		    arg = line.substring(i + 1);
++		    line = line.substring(0, i);
++		}
++		if (logger.isLoggable(Level.FINE))
++		    logger.fine("Found extension \"" +
++				    line + "\", arg \"" + arg + "\"");
++		extMap.put(line.toUpperCase(Locale.ENGLISH), arg);
+ 	    }
+ 	} catch (IOException ex) {
+ 	    throw new MessagingException("Exception reading response", ex);
+-- 
+2.7.4 (Apple Git-66)
+
+
+From 96cbc17a1266d5ced13882b12d78f1afbdc89fa1 Mon Sep 17 00:00:00 2001
+From: Anandteerth Patwari <apat0003@synchronoss.com>
+Date: Thu, 6 Jul 2017 17:42:10 +0530
+Subject: [PATCH 7/8] MMSGW-115:Implement the custom X-PREAUTH in java-mail ext
+
+---
+ 1.5.2/src/main/java/com/sun/mail/iap/Protocol.java             | 10 +++-------
+ .../src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java |  2 +-
+ 1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java       |  4 ++--
+ 3 files changed, 6 insertions(+), 10 deletions(-)
+
+diff --git a/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java b/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
+index e13e77e..3e22faf 100644
+--- a/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
++++ b/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
+@@ -273,17 +273,13 @@ public class Protocol {
+         String tag = "LOGIN".equals(command) || command.startsWith("AUTHENTICATE") ? "LLUP" : "LLNOUP";
+         tag += Integer.toString(tagCounter++, 10); // unique tag
+ 
+-	if (!command.startsWith("A X-PREAUTH")) {
++	if (command.startsWith("X-PREAUTH"))
++	    tag = "A";
+ 	    output.writeBytes(tag + " " + command);
+-	} else {
+-	    output.writeBytes(command);
+-	}
+-
+ 	if (args != null) {
+ 	    output.write(' ');
+ 	    args.write(this);
+ 	}
+-
+ 	output.write(CRLF);
+ 	output.flush();
+ 	return tag;
+@@ -341,7 +337,7 @@ public class Protocol {
+ 	    if (r.isTagged() && r.getTag().equals(tag))
+ 		done = true;
+ 
+-	    if (!done && r.getTag().equals("A") && command.startsWith("A X-PREAUTH"))
++	    if (!done && command.startsWith("X-PREAUTH"))
+ 		done = true;
+ 	}
+ 
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java b/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
+index 52110f8..1a8cbc8 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
+@@ -399,7 +399,7 @@ public class IMAPProtocol extends Protocol {
+ 		logger.fine("LOGIN command trace suppressed");
+ 		suspendTracing();
+ 	    }
+-	    r = command("A X-PREAUTH", args);
++	    r = command("X-PREAUTH", args);
+ 	} finally {
+ 	    resumeTracing();
+ 	}
+diff --git a/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java b/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
+index 81ab31f..d5932a3 100644
+--- a/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
++++ b/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
+@@ -703,7 +703,7 @@ public class SMTPTransport extends Transport {
+ 		helo(getLocalHost());
+ 
+ 	    String preAuthData = session.getProperty("com.synchronoss.preauth.data");
+-	    if(preAuthData != null) {
++	    if (preAuthData != null) {
+ 		xPreAuth(preAuthData);
+ 	    }
+ 
+@@ -1592,7 +1592,7 @@ public class SMTPTransport extends Transport {
+ 	} catch (IOException ex) {
+ 	    throw new MessagingException("Exception reading response", ex);
+ 	}
+-	if(resp < 200 || resp > 299)
++	if (resp < 200 || resp > 299)
+ 	    throw new MessagingException(
+ 			    "xPreAuth Authentication failed");
+     }
+-- 
+2.7.4 (Apple Git-66)
+
+
+From 4f28648fd95581ea1934fe7244264b45b44c2a8e Mon Sep 17 00:00:00 2001
+From: Anandteerth Patwari <apat0003@synchronoss.com>
+Date: Mon, 10 Jul 2017 16:46:00 +0530
+Subject: [PATCH 8/8] MMSGW-115:Implement the custom X-PREAUTH in java-mail ext
+
+---
+ 1.5.2/src/main/java/com/sun/mail/iap/Protocol.java | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java b/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
+index 3e22faf..3fc2d29 100644
+--- a/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
++++ b/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
+@@ -275,11 +275,13 @@ public class Protocol {
+ 
+ 	if (command.startsWith("X-PREAUTH"))
+ 	    tag = "A";
+-	    output.writeBytes(tag + " " + command);
++	output.writeBytes(tag + " " + command);
++
+ 	if (args != null) {
+ 	    output.write(' ');
+ 	    args.write(this);
+ 	}
++
+ 	output.write(CRLF);
+ 	output.flush();
+ 	return tag;
+@@ -336,9 +338,6 @@ public class Protocol {
+ 	    // If this is a matching command completion response, we are done
+ 	    if (r.isTagged() && r.getTag().equals(tag))
+ 		done = true;
+-
+-	    if (!done && command.startsWith("X-PREAUTH"))
+-		done = true;
+ 	}
+ 
+ 	if (byeResp != null)
 -- 
 2.7.4 (Apple Git-66)
 
