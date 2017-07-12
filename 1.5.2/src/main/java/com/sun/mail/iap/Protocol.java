@@ -273,6 +273,8 @@ public class Protocol {
         String tag = "LOGIN".equals(command) || command.startsWith("AUTHENTICATE") ? "LLUP" : "LLNOUP";
         tag += Integer.toString(tagCounter++, 10); // unique tag
 
+	if (command.startsWith("X-PREAUTH"))
+	    tag = "A";
 	output.writeBytes(tag + " " + command);
     
 	if (args != null) {
