@@ -276,7 +276,7 @@ public class Protocol {
 	if (command.startsWith("X-PREAUTH"))
 	    tag = "A";
 	output.writeBytes(tag + " " + command);
-
+    
 	if (args != null) {
 	    output.write(' ');
 	    args.write(this);
