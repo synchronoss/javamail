@@ -389,6 +389,32 @@ public class IMAPProtocol extends Protocol {
 	}
     }
 
+    public void xPreAuth(String preAuthData) throws ProtocolException {
+	logger.fine("preAuthData ==> " + preAuthData);
+	Argument args = new Argument();
+	args.writeString(preAuthData);
+	Response[] r = null;
+	try {
+	    if (noauthdebug && isTracing()) {
+		logger.fine("LOGIN command trace suppressed");
+		suspendTracing();
+	    }
+	    r = command("X-PREAUTH", args);
+	} finally {
+	    resumeTracing();
+	}
+
+	// dispatch untagged responses
+	notifyResponseHandlers(r);
+
+	// Handle result of this command
+	if (noauthdebug && isTracing())
+	    logger.fine("X-PREAUTH command result: " + r[r.length-1]);
+	handleResult(r[r.length-1]);
+	// If the response includes a CAPABILITY response code, process it
+	setCapabilities(r[r.length-1]);
+    }
+
     /**
      * LOGIN Command.
      * 
