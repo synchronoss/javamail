@@ -697,15 +697,14 @@ public class SMTPTransport extends Transport {
 		openServer(host, port);
 
 	    boolean succeed = false;
-	    if (useEhlo)
-		succeed = ehlo(getLocalHost());
-	    if (!succeed)
-		helo(getLocalHost());
-
 	    String preAuthData = session.getProperty("com.synchronoss.preauth.data");
 	    if (preAuthData != null) {
 		xPreAuth(preAuthData);
 	    }
+	    if (useEhlo)
+		succeed = ehlo(getLocalHost());
+	    if (!succeed)
+		helo(getLocalHost());
 
 	    if (useStartTLS || requireStartTLS) {
 		if (serverSocket instanceof SSLSocket) {
@@ -1567,7 +1566,9 @@ public class SMTPTransport extends Transport {
 	BufferedReader rd =
 			    new BufferedReader(new StringReader(lastServerResponse));
 	String line;
-	extMap = new Hashtable();
+	if (null == extMap) {
+	    extMap = new Hashtable();
+	}
 	try {
 	    boolean first = true;
 	    while ((line = rd.readLine()) != null) {
@@ -1620,7 +1621,9 @@ public class SMTPTransport extends Transport {
 	    BufferedReader rd =
 		new BufferedReader(new StringReader(lastServerResponse));
 	    String line;
-	    extMap = new Hashtable();
+	    if (null == extMap) {
+		extMap = new Hashtable();
+	    }
 	    try {
 		boolean first = true;
 		while ((line = rd.readLine()) != null) {
