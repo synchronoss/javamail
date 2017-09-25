@@ -1621,7 +1621,9 @@ public class SMTPTransport extends Transport {
 	    BufferedReader rd =
 		new BufferedReader(new StringReader(lastServerResponse));
 	    String line;
-	    extMap = new Hashtable();
+	    if (null == extMap) {
+		extMap = new Hashtable();
+	    }
 	    try {
 		boolean first = true;
 		while ((line = rd.readLine()) != null) {
