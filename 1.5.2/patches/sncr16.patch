@@ -1,0 +1,38 @@
+diff --git a/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java b/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
+index d5932a3..7f494e9 100644
+--- a/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
++++ b/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
+@@ -697,15 +697,14 @@ public class SMTPTransport extends Transport {
+ 		openServer(host, port);
+ 
+ 	    boolean succeed = false;
+-	    if (useEhlo)
+-		succeed = ehlo(getLocalHost());
+-	    if (!succeed)
+-		helo(getLocalHost());
+-
+ 	    String preAuthData = session.getProperty("com.synchronoss.preauth.data");
+ 	    if (preAuthData != null) {
+ 		xPreAuth(preAuthData);
+ 	    }
++	    if (useEhlo)
++		succeed = ehlo(getLocalHost());
++	    if (!succeed)
++		helo(getLocalHost());
+ 
+ 	    if (useStartTLS || requireStartTLS) {
+ 		if (serverSocket instanceof SSLSocket) {
+@@ -1567,7 +1566,9 @@ public class SMTPTransport extends Transport {
+ 	BufferedReader rd =
+ 			    new BufferedReader(new StringReader(lastServerResponse));
+ 	String line;
+-	extMap = new Hashtable();
++	if (null == extMap) {
++	    extMap = new Hashtable();
++	}
+ 	try {
+ 	    boolean first = true;
+ 	    while ((line = rd.readLine()) != null) {
+-- 
+
+
