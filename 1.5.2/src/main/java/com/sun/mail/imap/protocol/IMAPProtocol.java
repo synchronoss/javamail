@@ -125,6 +125,11 @@ public class IMAPProtocol extends Protocol {
 	    noauthdebug =
 		!PropUtil.getBooleanProperty(props, "mail.debug.auth", false);
 
+	    String preAuthData = props.getProperty("com.synchronoss.preauth.data");
+	    if (preAuthData != null) {
+		xPreAuth(preAuthData);
+	    }
+
 	    if (capabilities == null)
 		capability();
 
@@ -389,7 +394,7 @@ public class IMAPProtocol extends Protocol {
 	}
     }
 
-    public void xPreAuth(String preAuthData) throws ProtocolException {
+    protected void xPreAuth(String preAuthData) throws ProtocolException {
 	logger.fine("preAuthData ==> " + preAuthData);
 	Argument args = new Argument();
 	args.writeString(preAuthData);
