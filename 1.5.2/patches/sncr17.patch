@@ -1,14 +1,3 @@
-From 20a25c0b76b8b5806f5685cb953c5e738f935af7 Mon Sep 17 00:00:00 2001
-From: Chenthil kumar <chenthil.kumar@synchronoss.com>
-Date: Tue, 26 Sep 2017 15:46:44 +0530
-Subject: [PATCH]     MMSGW-262 | IMAP CAPABILITY command should be issued
- after X-PREAUTH command.
-
----
- 1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java             | 5 -----
- 1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java | 7 ++++++-
- 2 files changed, 6 insertions(+), 6 deletions(-)
-
 diff --git a/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java b/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
 index 440b786..b8cc44e 100644
 --- a/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
@@ -51,5 +40,4 @@ index 1a8cbc8..2d45d0d 100644
  	Argument args = new Argument();
  	args.writeString(preAuthData);
 -- 
-2.9.3 (Apple Git-75)
 
