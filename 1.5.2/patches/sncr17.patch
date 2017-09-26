@@ -1,0 +1,43 @@
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java b/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
+index 440b786..b8cc44e 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
+@@ -779,11 +779,6 @@ public class IMAPStore extends Store
+ 	    p.id(gmap);
+ 	}
+ 
+-	String preAuthData = session.getProperty("com.synchronoss.preauth.data");
+-	if (preAuthData != null) {
+-	    p.xPreAuth(preAuthData);
+-	}
+-
+ 	/*
+ 	 * Put a special "marker" in the capabilities list so we can
+ 	 * detect if the server refreshed the capabilities in the OK
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java b/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
+index 1a8cbc8..2d45d0d 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
+@@ -125,6 +125,11 @@ public class IMAPProtocol extends Protocol {
+ 	    noauthdebug =
+ 		!PropUtil.getBooleanProperty(props, "mail.debug.auth", false);
+ 
++	    String preAuthData = props.getProperty("com.synchronoss.preauth.data");
++	    if (preAuthData != null) {
++		xPreAuth(preAuthData);
++	    }
++
+ 	    if (capabilities == null)
+ 		capability();
+ 
+@@ -389,7 +394,7 @@ public class IMAPProtocol extends Protocol {
+ 	}
+     }
+ 
+-    public void xPreAuth(String preAuthData) throws ProtocolException {
++    protected void xPreAuth(String preAuthData) throws ProtocolException {
+ 	logger.fine("preAuthData ==> " + preAuthData);
+ 	Argument args = new Argument();
+ 	args.writeString(preAuthData);
+-- 
+
