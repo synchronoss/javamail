@@ -7,8 +7,6 @@
  */
 package com.sun.mail.imap.protocol;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.nio.charset.Charset;
 
 import com.sun.mail.iap.*; 
@@ -33,31 +31,21 @@ public class FIRSTLINE implements Item {
 
         r.skipSpaces();
 
-        // expect data of the form ("the quoted first line \" (maybe with escaped chars in it)")
+        // expect data of the form with quoted-string ("the quoted first line \" (maybe with escaped chars in it)")
+        // or of the form with literal ("{" number "}" CRLF *CHAR8)
         // but note that the summary may be UTF-8 (or a different encoding)
 
         if (r.readByte() != '(')
             throw new ParsingException("FIRSTLINE parse error");
 
-        // parse a quoted string value and return null if it fails
-        // readString is ASCII based so use readBytes
-        ByteArrayInputStream bais = r.readBytes();
-
-        if ((bais == null) || (r.readByte() != ')'))
-            throw new ParsingException("FIRSTLINE parse error");
-
-        byte arr[] = new byte[bais.available()];
-        try {
-            bais.read(arr);
-        }
-        catch (IOException e) {
+        // parse a quoted string value or literal value and return null if it fails
+        ByteArray bArray = r.parseString();
+        if (bArray == null || r.readByte() != ')') {
             throw new ParsingException("FIRSTLINE parse error");
         }
-
-        // this only supports UTF-8
-        firstLine = new String(arr, Charset.forName("UTF-8"));
-
         // also expose the byte array to allow clients to use different charsets (eg Big5)
-        firstLineAsBytes = arr;
+        firstLineAsBytes = bArray.getNewBytes();
+        // this only supports UTF-8
+        firstLine = new String(firstLineAsBytes, Charset.forName("UTF-8"));
     }
 }

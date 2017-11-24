@@ -1,0 +1,84 @@
+From 79fe2bf01df707685c8da0415463a7c06dea1ba4 Mon Sep 17 00:00:00 2001
+From: apple <liutianyuan80@gmail.com>
+Date: Fri, 24 Nov 2017 19:29:46 +0800
+Subject: [PATCH] MERCURY-1214 Add support to parse literal in FIRSTLINE
+ response
+
+---
+ 1.5.2/src/main/java/com/sun/mail/iap/Response.java |  8 +++++++
+ .../java/com/sun/mail/imap/protocol/FIRSTLINE.java | 28 +++++++---------------
+ 2 files changed, 16 insertions(+), 20 deletions(-)
+
+diff --git a/1.5.2/src/main/java/com/sun/mail/iap/Response.java b/1.5.2/src/main/java/com/sun/mail/iap/Response.java
+index 9416476..6071439 100644
+--- a/1.5.2/src/main/java/com/sun/mail/iap/Response.java
++++ b/1.5.2/src/main/java/com/sun/mail/iap/Response.java
+@@ -535,4 +535,12 @@ public class Response {
+ 	return ASCIIUtility.toString(buffer, 0, size);
+     }
+ 
++    /**
++     * Only supports QuotedString or Literal.<br>
++     * It is used as a workaround to fix the issue of readString returning ascii string
++     * @return ByteArray
++     */
++    public ByteArray parseString() {
++        return (ByteArray) parseString(false, false);
++    }
+ }
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/protocol/FIRSTLINE.java b/1.5.2/src/main/java/com/sun/mail/imap/protocol/FIRSTLINE.java
+index 2153421..389c62c 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/protocol/FIRSTLINE.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/protocol/FIRSTLINE.java
+@@ -7,8 +7,6 @@
+  */
+ package com.sun.mail.imap.protocol;
+ 
+-import java.io.ByteArrayInputStream;
+-import java.io.IOException;
+ import java.nio.charset.Charset;
+ 
+ import com.sun.mail.iap.*; 
+@@ -33,31 +31,21 @@ public class FIRSTLINE implements Item {
+ 
+         r.skipSpaces();
+ 
+-        // expect data of the form ("the quoted first line \" (maybe with escaped chars in it)")
++        // expect data of the form with quoted-string ("the quoted first line \" (maybe with escaped chars in it)")
++        // or of the form with literal ("{" number "}" CRLF *CHAR8)
+         // but note that the summary may be UTF-8 (or a different encoding)
+ 
+         if (r.readByte() != '(')
+             throw new ParsingException("FIRSTLINE parse error");
+ 
+-        // parse a quoted string value and return null if it fails
+-        // readString is ASCII based so use readBytes
+-        ByteArrayInputStream bais = r.readBytes();
+-
+-        if ((bais == null) || (r.readByte() != ')'))
+-            throw new ParsingException("FIRSTLINE parse error");
+-
+-        byte arr[] = new byte[bais.available()];
+-        try {
+-            bais.read(arr);
+-        }
+-        catch (IOException e) {
++        // parse a quoted string value or literal value and return null if it fails
++        ByteArray bArray = r.parseString();
++        if (bArray == null || r.readByte() != ')') {
+             throw new ParsingException("FIRSTLINE parse error");
+         }
+-
+-        // this only supports UTF-8
+-        firstLine = new String(arr, Charset.forName("UTF-8"));
+-
+         // also expose the byte array to allow clients to use different charsets (eg Big5)
+-        firstLineAsBytes = arr;
++        firstLineAsBytes = bArray.getNewBytes();
++        // this only supports UTF-8
++        firstLine = new String(firstLineAsBytes, Charset.forName("UTF-8"));
+     }
+ }
+-- 
+2.3.8 (Apple Git-58)
+
