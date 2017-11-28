@@ -1,0 +1,185 @@
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/protocol/FIRSTLINE.java b/1.5.2/src/main/java/com/sun/mail/imap/protocol/FIRSTLINE.java
+index 2153421..7a7e0a3 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/protocol/FIRSTLINE.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/protocol/FIRSTLINE.java
+@@ -7,8 +7,6 @@
+  */
+ package com.sun.mail.imap.protocol;
+ 
+-import java.io.ByteArrayInputStream;
+-import java.io.IOException;
+ import java.nio.charset.Charset;
+ 
+ import com.sun.mail.iap.*; 
+@@ -33,31 +31,21 @@ public class FIRSTLINE implements Item {
+ 
+         r.skipSpaces();
+ 
+-        // expect data of the form ("the quoted first line \" (maybe with escaped chars in it)")
++        // expect data of the form with quoted-string ("the quoted first line \" (maybe with escaped chars in it)")
++        // or of the form with literal ("{" number "}" CRLF *CHAR8)
+         // but note that the summary may be UTF-8 (or a different encoding)
+ 
+         if (r.readByte() != '(')
+             throw new ParsingException("FIRSTLINE parse error");
+ 
+-        // parse a quoted string value and return null if it fails
+-        // readString is ASCII based so use readBytes
+-        ByteArrayInputStream bais = r.readBytes();
+-
+-        if ((bais == null) || (r.readByte() != ')'))
+-            throw new ParsingException("FIRSTLINE parse error");
+-
+-        byte arr[] = new byte[bais.available()];
+-        try {
+-            bais.read(arr);
+-        }
+-        catch (IOException e) {
++        // parse a quoted string value or literal value and return null if it fails
++        ByteArray bArray = r.parseFirstLine();
++        if (bArray == null || r.readByte() != ')') {
+             throw new ParsingException("FIRSTLINE parse error");
+         }
+-
+-        // this only supports UTF-8
+-        firstLine = new String(arr, Charset.forName("UTF-8"));
+-
+         // also expose the byte array to allow clients to use different charsets (eg Big5)
+-        firstLineAsBytes = arr;
++        firstLineAsBytes = bArray.getNewBytes();
++        // this only supports UTF-8
++        firstLine = new String(firstLineAsBytes, Charset.forName("UTF-8"));
+     }
+ }
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/protocol/FetchResponse.java b/1.5.2/src/main/java/com/sun/mail/imap/protocol/FetchResponse.java
+index f7dee86..3833d7e 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/protocol/FetchResponse.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/protocol/FetchResponse.java
+@@ -317,4 +317,127 @@ public class FetchResponse extends IMAPResponse {
+ 	index += len;
+ 	return true;
+     }
++
++    private static enum FLState {
++        NA, LB, DIGIT, RB, CR, LF, QUOTE, QUOTE1, QUOTE2, ERR;
++
++        private boolean finished() {
++            switch (this) {
++            case LF:
++            case QUOTE2:
++            case ERR:
++                return true;
++            default:
++                return false;
++            }
++        }
++    };
++
++    /**
++     * Only supports QuotedString or Literal.<br>
++     * It is used only to parse the FIRSTLINE response which is of the following form.<br>
++     * <ul>
++     * <li>("quoted-string contents") </li>
++     * <li>("{length} CRLF literal-string contents")</li>
++     * </ul>
++     * @return ByteArray
++     */
++    public ByteArray parseFirstLine() {
++        byte b;
++        FLState s = FLState.NA;
++
++        // Skip leading spaces
++        skipSpaces();
++
++        int start = -1, copyto = -1, startLen = -1, copytoLen = -1;
++        b = buffer[index];
++        if (b == '"') { // QuotedString or Quoted Literal
++            index++; // skip the quote
++            start = index;
++            s = FLState.QUOTE;
++        } else {
++            s = FLState.ERR;
++        }
++
++        while(index < size && !s.finished()) {
++            b = buffer[index];
++            switch (s) {
++            case QUOTE:
++                if (b == '{') {
++                    s = FLState.LB;
++                }
++                else {
++                    s = FLState.QUOTE1;
++                }
++                break;
++            case QUOTE1:
++                if (b == '"') {
++                    s = FLState.QUOTE2;
++                    copyto = index;
++                }
++                break;
++            case LB:
++                if (Character.isDigit(b)) {
++                    s = FLState.DIGIT;
++                    startLen = index;
++                }
++                else {
++                    s = FLState.QUOTE1;
++                    index--;//re-check double quote
++                }
++                break;
++            case DIGIT:
++                if (b == '}') {
++                    s = FLState.RB;
++                    copytoLen = index;
++                }
++                else if (Character.isDigit(b)) {
++                    break;
++                }
++                else {
++                    s = FLState.QUOTE1;
++                    index--;//re-check double quote
++                }
++                break;
++            case RB:
++                if (b == '\r') {
++                    s = FLState.CR;
++                }
++                else {
++                    s = FLState.QUOTE1;
++                    index--;//re-check double quote
++                }
++                break;
++            case CR:
++                if (b == '\n') {
++                    s = FLState.LF;
++                    int count;
++                    try {
++                        count = ASCIIUtility.parseInt(buffer, startLen, copytoLen);
++                    } catch (NumberFormatException e) {
++                        s = FLState.ERR;
++                        break;
++                    }
++                    start = index + 1;
++                    copyto = start + count;
++                    index = copyto;//move current pointer after literal
++                }
++                else {
++                    s = FLState.QUOTE1;
++                    index--;//re-check double quote
++                }
++                break;
++            }
++
++            index++;
++        }
++
++        switch (s) {
++            case LF:
++            case QUOTE2:
++                return new ByteArray(buffer, start, copyto - start);
++            default:
++                return null;
++        }
++    }
+ }
