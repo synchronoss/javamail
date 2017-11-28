@@ -317,4 +317,127 @@ public class FetchResponse extends IMAPResponse {
 	index += len;
 	return true;
     }
+
+    private static enum FLState {
+        NA, LB, DIGIT, RB, CR, LF, QUOTE, QUOTE1, QUOTE2, ERR;
+
+        private boolean finished() {
+            switch (this) {
+            case LF:
+            case QUOTE2:
+            case ERR:
+                return true;
+            default:
+                return false;
+            }
+        }
+    };
+
+    /**
+     * Only supports QuotedString or Literal.<br>
+     * It is used only to parse the FIRSTLINE response which is of the following form.<br>
+     * <ul>
+     * <li>("quoted-string contents") </li>
+     * <li>("{length} CRLF literal-string contents")</li>
+     * </ul>
+     * @return ByteArray
+     */
+    public ByteArray parseFirstLine() {
+        byte b;
+        FLState s = FLState.NA;
+
+        // Skip leading spaces
+        skipSpaces();
+
+        int start = -1, copyto = -1, startLen = -1, copytoLen = -1;
+        b = buffer[index];
+        if (b == '"') { // QuotedString or Quoted Literal
+            index++; // skip the quote
+            start = index;
+            s = FLState.QUOTE;
+        } else {
+            s = FLState.ERR;
+        }
+
+        while(index < size && !s.finished()) {
+            b = buffer[index];
+            switch (s) {
+            case QUOTE:
+                if (b == '{') {
+                    s = FLState.LB;
+                }
+                else {
+                    s = FLState.QUOTE1;
+                }
+                break;
+            case QUOTE1:
+                if (b == '"') {
+                    s = FLState.QUOTE2;
+                    copyto = index;
+                }
+                break;
+            case LB:
+                if (Character.isDigit(b)) {
+                    s = FLState.DIGIT;
+                    startLen = index;
+                }
+                else {
+                    s = FLState.QUOTE1;
+                    index--;//re-check double quote
+                }
+                break;
+            case DIGIT:
+                if (b == '}') {
+                    s = FLState.RB;
+                    copytoLen = index;
+                }
+                else if (Character.isDigit(b)) {
+                    break;
+                }
+                else {
+                    s = FLState.QUOTE1;
+                    index--;//re-check double quote
+                }
+                break;
+            case RB:
+                if (b == '\r') {
+                    s = FLState.CR;
+                }
+                else {
+                    s = FLState.QUOTE1;
+                    index--;//re-check double quote
+                }
+                break;
+            case CR:
+                if (b == '\n') {
+                    s = FLState.LF;
+                    int count;
+                    try {
+                        count = ASCIIUtility.parseInt(buffer, startLen, copytoLen);
+                    } catch (NumberFormatException e) {
+                        s = FLState.ERR;
+                        break;
+                    }
+                    start = index + 1;
+                    copyto = start + count;
+                    index = copyto;//move current pointer after literal
+                }
+                else {
+                    s = FLState.QUOTE1;
+                    index--;//re-check double quote
+                }
+                break;
+            }
+
+            index++;
+        }
+
+        switch (s) {
+            case LF:
+            case QUOTE2:
+                return new ByteArray(buffer, start, copyto - start);
+            default:
+                return null;
+        }
+    }
 }
