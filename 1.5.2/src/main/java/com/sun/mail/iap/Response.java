@@ -535,12 +535,4 @@ public class Response {
 	return ASCIIUtility.toString(buffer, 0, size);
     }
 
-    /**
-     * Only supports QuotedString or Literal.<br>
-     * It is used as a workaround to fix the issue of readString returning ascii string
-     * @return ByteArray
-     */
-    public ByteArray parseString() {
-        return (ByteArray) parseString(false, false);
-    }
 }

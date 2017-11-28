@@ -39,7 +39,7 @@ public class FIRSTLINE implements Item {
             throw new ParsingException("FIRSTLINE parse error");
 
         // parse a quoted string value or literal value and return null if it fails
-        ByteArray bArray = r.parseString();
+        ByteArray bArray = r.parseFirstLine();
         if (bArray == null || r.readByte() != ')') {
             throw new ParsingException("FIRSTLINE parse error");
         }
