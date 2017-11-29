@@ -1,0 +1,41 @@
+From 225795b4e21b209625cc318965ccb94f0bc3d4be Mon Sep 17 00:00:00 2001
+From: Chenthil kumar <chenthil.kumar@synchronoss.com>
+Date: Wed, 29 Nov 2017 11:21:57 +0900
+Subject: [PATCH]     MMSGW-452 | javamail-ext is removing the response message
+ from IMAP for folder dosn't exist.
+
+---
+ 1.5.2/src/main/java/com/sun/mail/imap/IMAPFolder.java | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/IMAPFolder.java b/1.5.2/src/main/java/com/sun/mail/imap/IMAPFolder.java
+index dd49f84..dbe9ed2 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/IMAPFolder.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/IMAPFolder.java
+@@ -430,6 +430,14 @@ public class IMAPFolder extends Folder implements UIDFolder, ResponseHandler {
+ 		this, fullName + " not found");
+     }
+ 
++    protected void checkExists(Exception ex) throws MessagingException {
++	// If the boolean field 'exists' is false, check with the
++	// server by invoking exists() ..
++	if (!exists && !exists())
++	    throw new FolderNotFoundException(
++		this, fullName + " not found", ex);
++    }
++
+     /*
+      * Ensure the folder is closed.
+      * ASSERT: Must be called with this folder's synchronization lock held.
+@@ -1014,7 +1022,7 @@ public class IMAPFolder extends Folder implements UIDFolder, ResponseHandler {
+ 		 * Will use our existing protocol object.
+ 		 */
+ 		try {
+-		    checkExists(); // throw exception if folder doesn't exist
++		    checkExists(cex); // throw exception if folder doesn't exist
+ 
+ 		    if ((type & HOLDS_MESSAGES) == 0)
+ 			throw new MessagingException(
+-- 
+2.9.3 (Apple Git-75)
+
