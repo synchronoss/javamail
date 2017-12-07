@@ -1,8 +1,8 @@
 From 225795b4e21b209625cc318965ccb94f0bc3d4be Mon Sep 17 00:00:00 2001
 From: Chenthil kumar <chenthil.kumar@synchronoss.com>
 Date: Wed, 29 Nov 2017 11:21:57 +0900
-Subject: [PATCH]     MMSGW-452 | javamail-ext is removing the response message
- from IMAP for folder dosn't exist.
+Subject: [PATCH 1/4]     MMSGW-452 | javamail-ext is removing the response
+ message from IMAP for folder dosn't exist.
 
 ---
  1.5.2/src/main/java/com/sun/mail/imap/IMAPFolder.java | 10 +++++++++-
@@ -39,3 +39,57 @@ index dd49f84..dbe9ed2 100644
 -- 
 2.9.3 (Apple Git-75)
 
+From 8e8c4f5f5ca57e4a18199c68d023e848f3b7aa51 Mon Sep 17 00:00:00 2001
+From: Chenthil kumar <chenthil.kumar@synchronoss.com>
+Date: Thu, 7 Dec 2017 15:53:11 +0530
+Subject: [PATCH 3/4] MMSGW-452 | javamail-ext is removing the response message
+ from IMAP for folder dosn't exist.
+
+---
+ 1.5.2/src/main/java/com/sun/mail/imap/IMAPFolder.java | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/IMAPFolder.java b/1.5.2/src/main/java/com/sun/mail/imap/IMAPFolder.java
+index dbe9ed2..acc7201 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/IMAPFolder.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/IMAPFolder.java
+@@ -425,9 +425,7 @@ public class IMAPFolder extends Folder implements UIDFolder, ResponseHandler {
+     protected void checkExists() throws MessagingException {
+ 	// If the boolean field 'exists' is false, check with the
+ 	// server by invoking exists() ..
+-	if (!exists && !exists())
+-	    throw new FolderNotFoundException(
+-		this, fullName + " not found");
++	checkExists(null);
+     }
+ 
+     protected void checkExists(Exception ex) throws MessagingException {
+-- 
+2.9.3 (Apple Git-75)
+
+
+From 0093e30e423ee028585b26b2c19b6a5c9a490db1 Mon Sep 17 00:00:00 2001
+From: Chenthil kumar <chenthil.kumar@synchronoss.com>
+Date: Thu, 7 Dec 2017 15:56:43 +0530
+Subject: [PATCH 4/4] MMSGW-452 | javamail-ext is removing the response message
+ from IMAP for folder dosn't exist.
+
+---
+ 1.5.2/src/main/java/com/sun/mail/imap/IMAPFolder.java | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/IMAPFolder.java b/1.5.2/src/main/java/com/sun/mail/imap/IMAPFolder.java
+index acc7201..91f4eaa 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/IMAPFolder.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/IMAPFolder.java
+@@ -423,8 +423,6 @@ public class IMAPFolder extends Folder implements UIDFolder, ResponseHandler {
+      * ASSERT: Must be called with this folder's synchronization lock held.
+      */
+     protected void checkExists() throws MessagingException {
+-	// If the boolean field 'exists' is false, check with the
+-	// server by invoking exists() ..
+ 	checkExists(null);
+     }
+ 
+-- 
+2.9.3 (Apple Git-75)
