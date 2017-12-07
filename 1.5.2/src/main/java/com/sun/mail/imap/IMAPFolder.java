@@ -423,8 +423,6 @@ public class IMAPFolder extends Folder implements UIDFolder, ResponseHandler {
      * ASSERT: Must be called with this folder's synchronization lock held.
      */
     protected void checkExists() throws MessagingException {
-	// If the boolean field 'exists' is false, check with the
-	// server by invoking exists() ..
 	checkExists(null);
     }
 
