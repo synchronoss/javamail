@@ -425,9 +425,7 @@ public class IMAPFolder extends Folder implements UIDFolder, ResponseHandler {
     protected void checkExists() throws MessagingException {
 	// If the boolean field 'exists' is false, check with the
 	// server by invoking exists() ..
-	if (!exists && !exists())
-	    throw new FolderNotFoundException(
-		this, fullName + " not found");
+	checkExists(null);
     }
 
     protected void checkExists(Exception ex) throws MessagingException {
