@@ -423,11 +423,15 @@ public class IMAPFolder extends Folder implements UIDFolder, ResponseHandler {
      * ASSERT: Must be called with this folder's synchronization lock held.
      */
     protected void checkExists() throws MessagingException {
+	checkExists(null);
+    }
+
+    protected void checkExists(Exception ex) throws MessagingException {
 	// If the boolean field 'exists' is false, check with the
 	// server by invoking exists() ..
 	if (!exists && !exists())
 	    throw new FolderNotFoundException(
-		this, fullName + " not found");
+		this, fullName + " not found", ex);
     }
 
     /*
@@ -1014,7 +1018,7 @@ public class IMAPFolder extends Folder implements UIDFolder, ResponseHandler {
 		 * Will use our existing protocol object.
 		 */
 		try {
-		    checkExists(); // throw exception if folder doesn't exist
+		    checkExists(cex); // throw exception if folder doesn't exist
 
 		    if ((type & HOLDS_MESSAGES) == 0)
 			throw new MessagingException(
