@@ -1,0 +1,26 @@
+From 1e6bdeca89e571bffb3bf4b5004e7d807e9f94e3 Mon Sep 17 00:00:00 2001
+From: Chenthil kumar <chenthil.kumar@synchronoss.com>
+Date: Fri, 5 Jan 2018 18:35:36 +0530
+Subject: [PATCH]     MMSGW-465 | [CTC-10056] [MMSGW]STARTTLS command is
+ generated when Auth PLAIN respond code is 503.
+
+---
+ 1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java b/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
+index 803ceaf..178173c 100644
+--- a/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
++++ b/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
+@@ -863,7 +863,7 @@ public class SMTPTransport extends Transport {
+ 		 * A 530 response indicates that the server wants us to
+ 		 * issue a STARTTLS command first.  Do that and try again.
+ 		 */
+-		if (resp == 530) {
++		if (resp == 530 && useStartTLS) {
+ 		    startTLS();
+ 		    if (ir != null)
+ 			resp = simpleCommand("AUTH " + mech + " " + ir);
+-- 
+2.9.3 (Apple Git-75)
+
