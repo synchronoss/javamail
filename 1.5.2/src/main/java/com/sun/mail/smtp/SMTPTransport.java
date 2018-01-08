@@ -863,7 +863,7 @@ public class SMTPTransport extends Transport {
 		 * A 530 response indicates that the server wants us to
 		 * issue a STARTTLS command first.  Do that and try again.
 		 */
-		if (resp == 530 && (useStartTLS || requireStartTLS)) {
+		if (resp == 530) {
 		    startTLS();
 		    if (ir != null)
 			resp = simpleCommand("AUTH " + mech + " " + ir);
