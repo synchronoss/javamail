@@ -1595,7 +1595,7 @@ public class SMTPTransport extends Transport {
 	}
 	if (resp < 200 || resp > 299)
 	    throw new MessagingException(
-			    "xPreAuth Authentication failed");
+			    lastServerResponse);
     }
 
 

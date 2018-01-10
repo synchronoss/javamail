@@ -1,0 +1,31 @@
+From e24b7c8662e3703edc7b92d67869b52376179c97 Mon Sep 17 00:00:00 2001
+From: Chenthil kumar <chenthil.kumar@synchronoss.com>
+Date: Wed, 10 Jan 2018 16:20:07 +0530
+Subject: [PATCH] =?UTF-8?q?MMSGW-518=20|=20[CTC=20#9643]=20=E3=80=90MMSGW?=
+ =?UTF-8?q?=E3=80=91The=20"X-Mms-Reponse-Text"=20differs=20from=20the=20de?=
+ =?UTF-8?q?sign=20document=20when=20responding=20"4XX,=205XX"=20in=20the?=
+ =?UTF-8?q?=20SMTP=20sequence.?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ 1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java b/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
+index 5dee131..d8581b8 100644
+--- a/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
++++ b/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
+@@ -1595,7 +1595,7 @@ public class SMTPTransport extends Transport {
+ 	}
+ 	if (resp < 200 || resp > 299)
+ 	    throw new MessagingException(
+-			    "xPreAuth Authentication failed");
++			    lastServerResponse);
+     }
+ 
+ 
+-- 
+2.9.3 (Apple Git-75)
+
