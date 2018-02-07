@@ -2242,8 +2242,12 @@ public class SMTPTransport extends Transport {
 		    ", with response: " + lastServerResponse);
 	    String _lsr = lastServerResponse; // else rset will nuke it
 	    int _lrc = lastReturnCode;
-	    if (serverSocket != null)	// hasn't already been closed
-		issueCommand("RSET", -1);
+	    try {
+		if (serverSocket != null)    // hasn't already been closed
+		    issueCommand("RSET", -1);
+	    } catch (MessagingException mex) {
+		logger.log(Level.FINE, "RSET failed", mex);
+	    }
 	    lastServerResponse = _lsr;	// restore, for get
 	    lastReturnCode = _lrc;
 	    throw new SMTPSendFailedException(cmd, ret, lastServerResponse,

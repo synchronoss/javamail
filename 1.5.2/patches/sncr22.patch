@@ -1,0 +1,32 @@
+From 763a06c7565b677a481db4fb85665ffa28599ab3 Mon Sep 17 00:00:00 2001
+From: Chenthil kumar <chenthil.kumar@synchronoss.com>
+Date: Wed, 7 Feb 2018 18:33:02 +0530
+Subject: [PATCH]     MMSGW-538 | [CTC-12259] Retry indefinitely at 5XX
+ response with DATA command in SMTP sequence
+
+---
+ 1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java b/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
+index d8581b8..a2deafc 100644
+--- a/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
++++ b/1.5.2/src/main/java/com/sun/mail/smtp/SMTPTransport.java
+@@ -2242,8 +2242,12 @@ public class SMTPTransport extends Transport {
+ 		    ", with response: " + lastServerResponse);
+ 	    String _lsr = lastServerResponse; // else rset will nuke it
+ 	    int _lrc = lastReturnCode;
+-	    if (serverSocket != null)	// hasn't already been closed
+-		issueCommand("RSET", -1);
++	    try {
++		if (serverSocket != null)    // hasn't already been closed
++		    issueCommand("RSET", -1);
++	    } catch (MessagingException mex) {
++			logger.log(Level.FINE, "RSET failed", mex);
++	    }
+ 	    lastServerResponse = _lsr;	// restore, for get
+ 	    lastReturnCode = _lrc;
+ 	    throw new SMTPSendFailedException(cmd, ret, lastServerResponse,
+-- 
+2.9.3 (Apple Git-75)
+
