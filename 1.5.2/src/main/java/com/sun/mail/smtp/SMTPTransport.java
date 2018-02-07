@@ -2246,7 +2246,7 @@ public class SMTPTransport extends Transport {
 		if (serverSocket != null)    // hasn't already been closed
 		    issueCommand("RSET", -1);
 	    } catch (MessagingException mex) {
-			logger.log(Level.FINE, "RSET failed", mex);
+		logger.log(Level.FINE, "RSET failed", mex);
 	    }
 	    lastServerResponse = _lsr;	// restore, for get
 	    lastReturnCode = _lrc;
