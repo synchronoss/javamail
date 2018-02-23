@@ -1,0 +1,52 @@
+From 389db94e600a775f55ca442b72b6c7ab7207ffd3 Mon Sep 17 00:00:00 2001
+From: Chenthil kumar <chenthil.kumar@synchronoss.com>
+Date: Fri, 23 Feb 2018 21:45:51 +0530
+Subject: [PATCH] MMSGW-587 | [CTC-14345] [MMSGW] Retry interval at timeout in
+ IMAP sequence is different from Config setting value.
+
+---
+ 1.5.2/src/main/java/com/sun/mail/iap/Protocol.java   | 3 ++-
+ 1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java | 6 ++++++
+ 2 files changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java b/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
+index ebf89b4..0db2362 100644
+--- a/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
++++ b/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
+@@ -328,7 +328,8 @@ public class Protocol {
+ 		continue; // skip this response
+ 	    }
+ 
+-	    if (r.isBYE()) {
++	    if (r.isBYE() && PropUtil.getBooleanProperty(props,
++							prefix + ".readresponseretry", true)) {
+ 		byeResp = r;
+ 		continue;
+ 	    }
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java b/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
+index b8cc44e..2c609b3 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
+@@ -216,6 +216,7 @@ public class IMAPStore extends Store
+     private boolean requireStartTLS = false;	// require STARTTLS
+     private boolean usingSSL = false;		// using SSL?
+     private boolean enableSASL = false;		// enable SASL authentication
++    private boolean forceReadResponseRetry = true;
+     private String[] saslMechanisms;
+     private boolean forcePasswordRefresh = false;
+     // enable notification of IMAP responses
+@@ -550,6 +551,11 @@ public class IMAPStore extends Store
+ 	    }
+ 	}
+ 
++	forceReadResponseRetry = PropUtil.getBooleanSessionProperty(session,
++	    "mail." + name + ".readresponseretry", true);
++	if (!forceReadResponseRetry)
++	    logger.config("disable Read Response Retry");
++
+ 	// check if an authorization ID has been specified
+ 	s = session.getProperty("mail." + name + ".sasl.authorizationid");
+ 	if (s != null) {
+-- 
+2.9.3 (Apple Git-75)
+
