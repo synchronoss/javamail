@@ -216,6 +216,7 @@ public class IMAPStore extends Store
     private boolean requireStartTLS = false;	// require STARTTLS
     private boolean usingSSL = false;		// using SSL?
     private boolean enableSASL = false;		// enable SASL authentication
+    private boolean forceReadResponseRetry = true;
     private String[] saslMechanisms;
     private boolean forcePasswordRefresh = false;
     // enable notification of IMAP responses
@@ -549,6 +550,11 @@ public class IMAPStore extends Store
 		v.copyInto(saslMechanisms);
 	    }
 	}
+
+	forceReadResponseRetry = PropUtil.getBooleanSessionProperty(session,
+	    "mail." + name + ".readresponseretry", true);
+	if (!forceReadResponseRetry)
+	    logger.config("disable Read Response Retry");
 
 	// check if an authorization ID has been specified
 	s = session.getProperty("mail." + name + ".sasl.authorizationid");
