@@ -1,0 +1,43 @@
+From d9cee97fcb988daf82195b46628fe616aa613424 Mon Sep 17 00:00:00 2001
+From: Chenthil kumar <chenthil.kumar@synchronoss.com>
+Date: Mon, 5 Mar 2018 13:43:56 +0900
+Subject: [PATCH] MMSGW-587 | [CTC-14345] [MMSGW] Retry interval at timeout in
+ IMAP sequence is different from Config setting value.
+
+---
+ 1.5.2/src/main/java/com/sun/mail/iap/Protocol.java   | 3 ++-
+ 1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java | 4 ++++
+ 2 files changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java b/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
+index ebf89b4..0db2362 100644
+--- a/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
++++ b/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
+@@ -328,7 +328,8 @@ public class Protocol {
+                continue; // skip this response
+            }
+ 
+-           if (r.isBYE()) {
++           if (r.isBYE() && PropUtil.getBooleanProperty(props,
++                                                       prefix + ".readresponseretry", true)) {
+                byeResp = r;
+                continue;
+            }
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java b/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
+index b8cc44e..fe28171 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
+@@ -550,6 +550,10 @@ public class IMAPStore extends Store
+            }
+        }
+ 
++       if (!PropUtil.getBooleanSessionProperty(session,
++           "mail." + name + ".readresponseretry", true))
++           logger.config("disable Read Response Retry");
++
+        // check if an authorization ID has been specified
+        s = session.getProperty("mail." + name + ".sasl.authorizationid");
+        if (s != null) {
+-- 
+2.14.3 (Apple Git-98)
+
