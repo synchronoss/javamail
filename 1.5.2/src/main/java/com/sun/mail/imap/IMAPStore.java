@@ -550,6 +550,10 @@ public class IMAPStore extends Store
 	    }
 	}
 
+	if (!PropUtil.getBooleanSessionProperty(session,
+	    "mail." + name + ".readresponseretry", true))
+	    logger.config("disable Read Response Retry");
+
 	// check if an authorization ID has been specified
 	s = session.getProperty("mail." + name + ".sasl.authorizationid");
 	if (s != null) {
