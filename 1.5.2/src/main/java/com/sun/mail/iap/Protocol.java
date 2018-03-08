@@ -334,7 +334,7 @@ public class Protocol {
 			prefix + ".readresponseretry", true))
 		    continue;
 		else
-		    break;
+		    done = true;
 	    }
 
 	    v.addElement(r);
