@@ -1,0 +1,34 @@
+From 3fc6b4ae45a0457ed30d089499f247088935b279 Mon Sep 17 00:00:00 2001
+From: Chenthil kumar <chenthil.kumar@synchronoss.com>
+Date: Thu, 8 Mar 2018 21:09:22 +0900
+Subject: [PATCH] MMSGW-587 | [CTC-14345] [MMSGW] Retry interval at timeout in
+ IMAP sequence is different from Config setting value.
+
+---
+ 1.5.2/src/main/java/com/sun/mail/iap/Protocol.java | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java b/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
+index 0db2362..2de6f2e 100644
+--- a/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
++++ b/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
+@@ -328,10 +328,13 @@ public class Protocol {
+ 		continue; // skip this response
+ 	    }
+ 
+-	    if (r.isBYE() && PropUtil.getBooleanProperty(props,
+-							prefix + ".readresponseretry", true)) {
++	    if (r.isBYE()) {
+ 		byeResp = r;
+-		continue;
++		if(PropUtil.getBooleanProperty(props,
++			prefix + ".readresponseretry", true))
++		    continue;
++		else
++		    break;
+ 	    }
+ 
+ 	    v.addElement(r);
+-- 
+2.14.3 (Apple Git-98)
+
