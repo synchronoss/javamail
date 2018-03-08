@@ -328,9 +328,10 @@ public class Protocol {
 		continue; // skip this response
 	    }
 
-	    if (r.isBYE() && PropUtil.getBooleanProperty(props,
-							prefix + ".readresponseretry", true)) {
+	    if (r.isBYE()) {
 		byeResp = r;
+		if (!PropUtil.getBooleanProperty(props, prefix + ".readresponseretry", true))
+		    done = true;
 		continue;
 	    }
 
