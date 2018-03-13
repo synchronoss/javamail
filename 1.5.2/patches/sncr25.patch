@@ -1,0 +1,41 @@
+From 97674d9f32649fc53ecbae1346045c8ea9218c32 Mon Sep 17 00:00:00 2001
+From: Chenthil kumar <chenthil.kumar@synchronoss.com>
+Date: Tue, 13 Mar 2018 12:19:10 +0900
+Subject: [PATCH] MMSGW-661 | [CTC-13002] should error when IMAP return
+ undefined TAG response
+
+---
+ 1.5.2/src/main/java/com/sun/mail/iap/Protocol.java         | 3 ++-
+ 1.5.2/src/main/java/com/sun/mail/imap/IMAPInputStream.java | 2 +-
+ 2 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java b/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
+index fe7ce79..c5b9717 100644
+--- a/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
++++ b/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
+@@ -364,7 +364,8 @@ public class Protocol {
+ 	else if (response.isBYE()) {
+ 	    disconnect();
+ 	    throw new ConnectionException(this, response);
+-	}
++	} else
++	    throw new ParsingException(response);
+     }
+ 
+     /**
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/IMAPInputStream.java b/1.5.2/src/main/java/com/sun/mail/imap/IMAPInputStream.java
+index 8f79348..319a6a7 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/IMAPInputStream.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/IMAPInputStream.java
+@@ -156,7 +156,7 @@ public class IMAPInputStream extends InputStream {
+ 		    b = p.fetchBody(seqnum, section, pos, cnt, readbuf);
+ 	    } catch (ProtocolException pex) {
+ 		forceCheckExpunged();
+-		throw new IOException(pex.getMessage());
++		throw new IOException(pex.getMessage(), pex);
+ 	    } catch (FolderClosedException fex) {
+ 		throw new FolderClosedIOException(fex.getFolder(),
+ 						fex.getMessage());
+-- 
+2.14.3 (Apple Git-98)
+
