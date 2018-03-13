@@ -203,8 +203,7 @@ public class IMAPProtocol extends Protocol {
 	// Check CAPABILITY
 	Response[] r = command("CAPABILITY", null);
 
-	if (!r[r.length-1].isOK())
-	    throw new ProtocolException(r[r.length-1].toString());
+	handleResult(r[r.length-1]);
 
 	capabilities = new HashMap(10);
 	authmechs = new ArrayList(5);
