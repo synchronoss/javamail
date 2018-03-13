@@ -156,7 +156,7 @@ public class IMAPInputStream extends InputStream {
 		    b = p.fetchBody(seqnum, section, pos, cnt, readbuf);
 	    } catch (ProtocolException pex) {
 		forceCheckExpunged();
-		throw new IOException(pex.getMessage());
+		throw new IOException(pex.getMessage(), pex);
 	    } catch (FolderClosedException fex) {
 		throw new FolderClosedIOException(fex.getFolder(),
 						fex.getMessage());
