@@ -37,7 +37,6 @@ index 8f79348..319a6a7 100644
  	    } catch (FolderClosedException fex) {
  		throw new FolderClosedIOException(fex.getFolder(),
  						fex.getMessage());
-     /**
 diff --git a/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java b/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
 index 2d45d0d..dd34353 100644
 --- a/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
