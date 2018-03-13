@@ -364,7 +364,8 @@ public class Protocol {
 	else if (response.isBYE()) {
 	    disconnect();
 	    throw new ConnectionException(this, response);
-	}
+	} else
+	    throw new ParsingException(response);
     }
 
     /**

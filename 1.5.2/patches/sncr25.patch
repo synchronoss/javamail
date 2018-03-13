@@ -1,0 +1,62 @@
+From da204a07e5313ee0a6bed48aed3a12f216682565 Mon Sep 17 00:00:00 2001
+From: Chenthil kumar <chenthil.kumar@synchronoss.com>
+Date: Tue, 13 Mar 2018 16:28:52 +0900
+Subject: [PATCH] MMSGW-661 | [CTC-13002] should error when IMAP return
+ undefined TAG response
+
+---
+ 1.5.2/src/main/java/com/sun/mail/iap/Protocol.java               | 3 ++-
+ 1.5.2/src/main/java/com/sun/mail/imap/IMAPInputStream.java       | 2 +-
+ 1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java | 8 ++++++--
+ 3 files changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java b/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
+index fe7ce79..27bea85 100644
+--- a/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
++++ b/1.5.2/src/main/java/com/sun/mail/iap/Protocol.java
+@@ -364,8 +364,9 @@ public class Protocol {
+ 	else if (response.isBYE()) {
+ 	    disconnect();
+ 	    throw new ConnectionException(this, response);
++	} else
++	    throw new ParsingException(response);
+ 	}
+-    }
+ 
+     /**
+      * Convenience routine to handle simple IAP commands
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/IMAPInputStream.java b/1.5.2/src/main/java/com/sun/mail/imap/IMAPInputStream.java
+index 8f79348..319a6a7 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/IMAPInputStream.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/IMAPInputStream.java
+@@ -156,7 +156,7 @@ public class IMAPInputStream extends InputStream {
+ 		    b = p.fetchBody(seqnum, section, pos, cnt, readbuf);
+ 	    } catch (ProtocolException pex) {
+ 		forceCheckExpunged();
+-		throw new IOException(pex.getMessage());
++		throw new IOException(pex.getMessage(), pex);
+ 	    } catch (FolderClosedException fex) {
+ 		throw new FolderClosedIOException(fex.getFolder(),
+ 						fex.getMessage());
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java b/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
+index 2d45d0d..3fa2a3a 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/protocol/IMAPProtocol.java
+@@ -203,8 +203,12 @@ public class IMAPProtocol extends Protocol {
+ 	// Check CAPABILITY
+ 	Response[] r = command("CAPABILITY", null);
+ 
+-	if (!r[r.length-1].isOK())
+-	    throw new ProtocolException(r[r.length-1].toString());
++	if (!r[r.length-1].isOK()) {
++	    if (r[r.length-1].isNO() || r[r.length-1].isBAD() || r[r.length-1].isBYE())
++		throw new ProtocolException(r[r.length-1].toString());
++	    else
++		throw new ParsingException(r[r.length-1]);
++	}
+ 
+ 	capabilities = new HashMap(10);
+ 	authmechs = new ArrayList(5);
+-- 
+2.14.3 (Apple Git-98)
+
