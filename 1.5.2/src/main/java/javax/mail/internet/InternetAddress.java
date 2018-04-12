@@ -309,6 +309,10 @@ public class InternetAddress extends Address implements Cloneable {
         return null;
     }
 
+    public String getEncodedPersonal() {
+        return encodedPersonal;
+    }
+
     private int getNumberOfChars(String s, String c) {
         int lnth = s.length();
         int removed = s.replaceAll(c, "").length();
