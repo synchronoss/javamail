@@ -1,0 +1,28 @@
+From 48370fa9cc17cbf3bd49fd15b671ab32bf5a962b Mon Sep 17 00:00:00 2001
+From: Chenthil kumar <chenthil.kumar@synchronoss.com>
+Date: Thu, 12 Apr 2018 12:08:14 +0530
+Subject: [PATCH] MMSGW-680 | [CTC-16681] [Super Blocker] [Retrieve-Req]
+ removed correct TO/FROM header in creating PDU.
+
+---
+ 1.5.2/src/main/java/javax/mail/internet/InternetAddress.java | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/1.5.2/src/main/java/javax/mail/internet/InternetAddress.java b/1.5.2/src/main/java/javax/mail/internet/InternetAddress.java
+index 65b80ee..207e69a 100644
+--- a/1.5.2/src/main/java/javax/mail/internet/InternetAddress.java
++++ b/1.5.2/src/main/java/javax/mail/internet/InternetAddress.java
+@@ -309,6 +309,10 @@ public class InternetAddress extends Address implements Cloneable {
+         return null;
+     }
+ 
++    public String getEncodedPersonal() {
++        return encodedPersonal;
++    }
++
+     private int getNumberOfChars(String s, String c) {
+         int lnth = s.length();
+         int removed = s.replaceAll(c, "").length();
+-- 
+2.14.3 (Apple Git-98)
+
