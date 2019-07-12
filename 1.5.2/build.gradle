@@ -1,0 +1,94 @@
+buildscript {
+    repositories {
+        maven { url repoUrl }
+        mavenLocal()
+    }
+}
+
+plugins {
+    id "java"
+    id "maven-publish"
+}
+
+repositories {
+    maven { url repoUrl }
+    mavenLocal()
+}
+
+ext {
+    buildNumber = project.hasProperty("buildNumber") ? "-" + project.getProperty("buildNumber") : ""
+    repoUsername = project.hasProperty("repoUsername") ? project.getProperty("repoUsername") : "anonymous"
+    repoPassword = project.hasProperty("repoPassword") ? project.getProperty("repoPassword") : ""
+    mailSpecVersion = "1.5"
+}
+
+sourceSets.main.java.srcDirs = [
+    "src/main/java",
+    "${buildDir}/generated-source"
+]
+
+targetCompatibility = "1.7"
+sourceCompatibility = "1.7"
+
+publishing {
+    repositories {
+        maven {
+            url releaseRepoUrl
+
+            credentials {
+                username "${repoUsername}"
+                password "${repoPassword}"
+            }
+        }
+    }
+
+    publications {
+        mavenNebula(MavenPublication) {
+            version = "${version}" + "${buildNumber}"
+
+            artifact sourceJar
+            artifact javadocJar
+            artifact jar
+        }
+    }
+}
+
+jar {
+    manifest {
+        attributes (
+            "Extension-Name": "javax.mail",
+            "Specification-Title": "JavaMail(TM) API Design Specification",
+            "Specification-Version": "${mailSpecVersion}",
+            "Specification-Vendor": "Oracle",
+            "Implementation-Title": "javax.mail",
+            "Implementation-Version": "${version}",
+            "Implementation-Vendor": "Oracle",
+            "Implementation-Vendor-Id": "com.sun"
+        )
+    }
+
+    exclude("**/Version.java")
+}
+
+javadoc {
+    // avoid java8 doclint errors - without the -quiet option, the build fails
+    options.addStringOption("Xdoclint:none", "-quiet")
+}
+
+task sourceJar(type: Jar) {
+    classifier "sources"
+    from ("src/main/java")
+}
+
+task javadocJar(type: Jar) {
+    classifier "javadoc"
+    from javadoc
+}
+
+task generateSource(type: Copy) {
+    from file("src/main/resources/javax/mail/Version.java")
+    into file("${buildDir}/generated-source/javax/mail")
+    filter { line -> line.replaceAll("\\\$\\{mail.version\\}", "${version}") }
+
+    tasks.findByName("compileJava").dependsOn "generateSource"
+}
