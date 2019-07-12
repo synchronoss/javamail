@@ -17,8 +17,8 @@ repositories {
 
 ext {
     buildNumber = project.hasProperty("buildNumber") ? "-" + project.getProperty("buildNumber") : ""
-    repoUsername = "anonymous"
-    repoPassword = ""
+    repoUsername = project.hasProperty("repoUsername") ? project.getProperty("repoUsername") : "anonymous"
+    repoPassword = project.hasProperty("repoPassword") ? project.getProperty("repoPassword") : ""
     mailSpecVersion = "1.5"
 }
 
