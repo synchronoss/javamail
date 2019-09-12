@@ -1,6 +1,7 @@
 buildscript {
     repositories {
-        maven { url repoUrl }
+        maven { url snapshotRepoUrl }
+        maven { url releaseRepoUrl }
         mavenLocal()
     }
 }
@@ -11,15 +12,38 @@ plugins {
 }
 
 repositories {
-    maven { url repoUrl }
+    maven { url snapshotRepoUrl }
+    maven { url releaseRepoUrl }
     mavenLocal()
 }
 
 ext {
     buildNumber = project.hasProperty("buildNumber") ? "-" + project.getProperty("buildNumber") : ""
-    repoUsername = project.hasProperty("repoUsername") ? project.getProperty("repoUsername") : "anonymous"
-    repoPassword = project.hasProperty("repoPassword") ? project.getProperty("repoPassword") : ""
     mailSpecVersion = "1.5"
+}
+
+project.configure(project) {
+    String GRADLE_PROPS_LOCATION = "/home/devtools/.m2/gradle-user.txt"
+    String LOCAL_GRADLE_PROPS_LOCATION = "${System.env.HOME}/.m2/gradle-user.txt"
+    File gradlePropsFile = new File(GRADLE_PROPS_LOCATION)
+
+    if (!gradlePropsFile.exists()) {
+        gradlePropsFile = new File(LOCAL_GRADLE_PROPS_LOCATION)
+    }
+
+    ext.publisherUsername = null
+    ext.publisherPassword = null
+
+    Properties publisherProps = new Properties()
+    if (gradlePropsFile.exists()) {
+        gradlePropsFile.withInputStream {
+            stream -> publisherProps.load(stream)
+        }
+        ext.publisherUsername = publisherProps.getProperty("publisherUsername")
+        ext.publisherPassword = publisherProps.getProperty("publisherPassword")
+    } else {
+        println "WARNING: If you want to publish to nexus, ${GRADLE_PROPS_LOCATION} or ${LOCAL_GRADLE_PROPS_LOCATION} must exist and contain two properties: publisherUsername and publisherPassword"
+    }
 }
 
 sourceSets.main.java.srcDirs = [
@@ -33,22 +57,21 @@ sourceCompatibility = "1.7"
 publishing {
     repositories {
         maven {
-            url releaseRepoUrl
+            url = releasePublisherUrl
 
             credentials {
-                username "${repoUsername}"
-                password "${repoPassword}"
+                username "${project.ext.publisherUsername}"
+                password "${project.ext.publisherPassword}"
             }
         }
     }
 
     publications {
-        mavenNebula(MavenPublication) {
-            version = "${version}" + "${buildNumber}"
+        maven(MavenPublication) {
+            from components.java
 
             artifact sourceJar
             artifact javadocJar
-            artifact jar
         }
     }
 }
