@@ -18,7 +18,6 @@ repositories {
 }
 
 ext {
-    buildNumber = project.hasProperty("buildNumber") ? "-" + project.getProperty("buildNumber") : ""
     mailSpecVersion = "1.5"
 }
 
