@@ -1238,10 +1238,14 @@ public class IMAPStore extends Store
         }
     }
 
+    private void releaseStoreProtocol(IMAPProtocol protocol) {
+        releaseStoreProtocol(protocol, true);
+    }
+
     /**
      * Release the store connection.
      */
-    private void releaseStoreProtocol(IMAPProtocol protocol) {
+    private void releaseStoreProtocol(IMAPProtocol protocol, boolean cleanUpWhenFailed) {
 
 	// will be called from idle() without the Store lock held,
 	// but cleanup is synchronized and will acquire the Store lock
@@ -1268,7 +1272,14 @@ public class IMAPStore extends Store
 
 	    pool.logger.fine("releaseStoreProtocol()");
 
+            if (failed) {
+                pool.logger.fine("releaseStoreProtocol: remove a down connection from pool");
+                pool.authenticatedConnections.remove(protocol);
+                protocol.removeResponseHandler(this);
+                protocol.disconnect();
+            }
             timeoutConnections();
+
         }
 
 	/*
@@ -1277,7 +1288,7 @@ public class IMAPStore extends Store
 	 * connection pool not be locked while we do this.
 	 */
 	assert !Thread.holdsLock(pool);
-	if (failed)
+	if (cleanUpWhenFailed && failed)
 	    cleanup();
     }
 
@@ -1505,13 +1516,31 @@ public class IMAPStore extends Store
 	 */
    
         IMAPProtocol p = null;
-	try {
-	    p = getStoreProtocol();
-            p.noop();
-	} catch (ProtocolException pex) {
-	    // will return false below
-        } finally {
-            releaseStoreProtocol(p);
+        /*
+         * Java mail does not expect IMAP server to close connection too early, but this is the case in SB.
+         * So a down connection does not necessarily mean the store is not connected.
+         * But even if all connections are down, we can still add new connections via the pool until the store is closed manually.
+         *
+         * The following code only creates a chance to cleanup dead connections before they are even used.
+         * Only those connections in pool are tested and since getStoreProtocol always return the oldest connection,
+         * in practice it does not need to go through all connections.
+         */
+        int retry;
+        synchronized(pool) {
+            retry = pool.authenticatedConnections.size();
+        }
+        retry = retry == 0 ? 1 : retry;
+        while (retry > 0) {
+            try {
+                p = getStoreProtocol();
+                p.noop();
+                break;
+            } catch (ProtocolException pex) {
+                // will return false below
+            } finally {
+                releaseStoreProtocol(p, false);
+            }
+            --retry;
         }
 
 
