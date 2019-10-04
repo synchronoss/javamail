@@ -1,0 +1,458 @@
+From ed06676d5cedb1a188c35e1b9d8c15762cffe126 Mon Sep 17 00:00:00 2001
+From: Thunder Liu <thunder.liu@synchronoss.com>
+Date: Mon, 23 Sep 2019 11:01:12 +0100
+Subject: [PATCH] MERCURY-2007 Patch Java-Mail to Bypass CleanUp in
+ IMAPStore.isConnected
+
+---
+ 1.5.2/build.gradle                            |   6 +
+ .../java/com/sun/mail/imap/IMAPStore.java     |  47 +++-
+ .../java/com/sun/mail/imap/IMAPStoreTest.java | 106 +++++++++
+ .../com/sun/mail/imap/MockIMAPServer.java     | 221 ++++++++++++++++++
+ 4 files changed, 371 insertions(+), 9 deletions(-)
+ create mode 100644 1.5.2/src/test/java/com/sun/mail/imap/IMAPStoreTest.java
+ create mode 100644 1.5.2/src/test/java/com/sun/mail/imap/MockIMAPServer.java
+
+diff --git a/1.5.2/build.gradle b/1.5.2/build.gradle
+index 8e68f4a..6fc5f00 100644
+--- a/1.5.2/build.gradle
++++ b/1.5.2/build.gradle
+@@ -50,6 +50,12 @@ sourceSets.main.java.srcDirs = [
+     "${buildDir}/generated-source"
+ ]
+ 
++sourceSets.test.resources.srcDirs += [ "src/test/java" ]
++
++dependencies {
++    testCompile("junit:junit:4.11")
++}
++
+ targetCompatibility = "1.7"
+ sourceCompatibility = "1.7"
+ 
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java b/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
+index fe28171..00f5230 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
+@@ -1238,10 +1238,14 @@ public class IMAPStore extends Store
+         }
+     }
+ 
++    private void releaseStoreProtocol(IMAPProtocol protocol) {
++        releaseStoreProtocol(protocol, true);
++    }
++
+     /**
+      * Release the store connection.
+      */
+-    private void releaseStoreProtocol(IMAPProtocol protocol) {
++    private void releaseStoreProtocol(IMAPProtocol protocol, boolean cleanUpWhenFailed) {
+ 
+ 	// will be called from idle() without the Store lock held,
+ 	// but cleanup is synchronized and will acquire the Store lock
+@@ -1268,7 +1272,14 @@ public class IMAPStore extends Store
+ 
+ 	    pool.logger.fine("releaseStoreProtocol()");
+ 
++            if (failed) {
++                pool.logger.fine("releaseStoreProtocol: remove a down connection from pool");
++                pool.authenticatedConnections.remove(protocol);
++                protocol.removeResponseHandler(this);
++                protocol.disconnect();
++            }
+             timeoutConnections();
++
+         }
+ 
+ 	/*
+@@ -1277,7 +1288,7 @@ public class IMAPStore extends Store
+ 	 * connection pool not be locked while we do this.
+ 	 */
+ 	assert !Thread.holdsLock(pool);
+-	if (failed)
++	if (cleanUpWhenFailed && failed)
+ 	    cleanup();
+     }
+ 
+@@ -1505,13 +1516,31 @@ public class IMAPStore extends Store
+ 	 */
+    
+         IMAPProtocol p = null;
+-	try {
+-	    p = getStoreProtocol();
+-            p.noop();
+-	} catch (ProtocolException pex) {
+-	    // will return false below
+-        } finally {
+-            releaseStoreProtocol(p);
++        /*
++         * Java mail does not expect IMAP server to close connection too early, but this is the case in SB.
++         * So a down connection does not necessarily mean the store is not connected.
++         * But even if all connections are down, we can still add new connections via the pool until the store is closed manually.
++         *
++         * The following code only creates a chance to cleanup dead connections before they are even used.
++         * Only those connections in pool are tested and since getStoreProtocol always return the oldest connection,
++         * in practice it does not need to go through all connections.
++         */
++        int retry;
++        synchronized(pool) {
++            retry = pool.authenticatedConnections.size();
++        }
++        retry = retry == 0 ? 1 : retry;
++        while (retry > 0) {
++            try {
++                p = getStoreProtocol();
++                p.noop();
++                break;
++            } catch (ProtocolException pex) {
++                // will return false below
++            } finally {
++                releaseStoreProtocol(p, false);
++            }
++            --retry;
+         }
+ 
+ 
+diff --git a/1.5.2/src/test/java/com/sun/mail/imap/IMAPStoreTest.java b/1.5.2/src/test/java/com/sun/mail/imap/IMAPStoreTest.java
+new file mode 100644
+index 0000000..e1a410f
+--- /dev/null
++++ b/1.5.2/src/test/java/com/sun/mail/imap/IMAPStoreTest.java
+@@ -0,0 +1,106 @@
++package com.sun.mail.imap;
++
++import static org.junit.Assert.assertEquals;
++import static org.junit.Assert.assertTrue;
++
++import java.util.Properties;
++
++import javax.mail.Folder;
++import javax.mail.FolderClosedException;
++import javax.mail.MessagingException;
++import javax.mail.Session;
++
++import org.junit.After;
++import org.junit.Before;
++import org.junit.Ignore;
++import org.junit.Test;
++
++public class IMAPStoreTest {
++    private IMAPStore store;
++    private MockIMAPServer server;
++
++    @Before
++    public void setUp() throws MessagingException {
++        final int port = 143;
++        server = new MockIMAPServer(port, 20);
++        server.start();
++
++        String host = "localhost";
++        String username = "u1@openwave.dom";
++        String password = "p";
++        Properties props = new Properties();
++
++        Session session = Session.getInstance(props);
++        store = (IMAPStore) session.getStore("imap");
++        store.connect(host, port, username, password);
++
++    }
++
++    @After
++    public void tearDown() throws MessagingException {
++        store.close();
++        server.close();
++    }
++
++    @Test
++    public void storeConnected() {
++        assertTrue(store.isConnected());
++        assertEquals(1, server.getClientCounts());
++    }
++
++    @Test
++    public void openFolder() throws Exception {
++        IMAPFolder inbox = (IMAPFolder) store.getFolder("INBOX");
++        inbox.open(Folder.READ_WRITE);
++        store.isConnected();
++        assertEquals(2, server.getClientCounts());
++    }
++
++    @Test
++    public void closeStore() throws MessagingException {
++        assertEquals(1, server.getClientCounts());
++        store.close();
++        assertEquals(0, server.getClientCounts());
++        assertEquals(false, store.isConnected());
++        assertEquals(0, server.getClientCounts());
++    }
++
++    @Ignore
++    @Test(expected = FolderClosedException.class)
++    public void folderClosedExceptionNotFixed() throws Exception {
++        IMAPFolder inbox = (IMAPFolder) store.getFolder("INBOX");
++        inbox.open(Folder.READ_WRITE);
++        IMAPMessage msg = (IMAPMessage) inbox.getMessageByUID(1000);
++        assertTrue(msg != null);
++
++        assertEquals(true, store.isConnected());
++        assertEquals(2, server.getClientCounts());
++        server.closeClientSocket(1);
++        assertEquals(1, server.getClientCounts());
++
++        /*
++         * Upon seeing "* BYE IMAP4 server terminating connection",
++         * java-mail close all connections and folders in its pool
++         */
++        assertEquals(false, store.isConnected());
++        assertEquals(0, server.getClientCounts());
++        msg.getContent();//throws FolderClosedException
++    }
++
++    @Test
++    public void folderClosedExceptionFixed() throws Exception {
++        IMAPFolder inbox = (IMAPFolder) store.getFolder("INBOX");
++        inbox.open(Folder.READ_WRITE);
++        IMAPMessage msg = (IMAPMessage) inbox.getMessageByUID(1000);
++        assertTrue(msg != null);
++
++        assertEquals(true, store.isConnected());
++        assertEquals(2, server.getClientCounts());
++        server.closeClientSocket(1);
++        assertEquals(1, server.getClientCounts());
++
++        assertEquals(true, store.isConnected());
++        assertEquals(1, server.getClientCounts());
++        assertTrue(msg.getContent() != null);
++    }
++}
+diff --git a/1.5.2/src/test/java/com/sun/mail/imap/MockIMAPServer.java b/1.5.2/src/test/java/com/sun/mail/imap/MockIMAPServer.java
+new file mode 100644
+index 0000000..eaeb219
+--- /dev/null
++++ b/1.5.2/src/test/java/com/sun/mail/imap/MockIMAPServer.java
+@@ -0,0 +1,221 @@
++package com.sun.mail.imap;
++
++import java.io.BufferedReader;
++import java.io.IOException;
++import java.io.InputStreamReader;
++import java.net.InetSocketAddress;
++import java.net.ServerSocket;
++import java.net.Socket;
++import java.util.Scanner;
++import java.util.Vector;
++import java.util.concurrent.ExecutorService;
++import java.util.concurrent.Executors;
++
++public class MockIMAPServer {
++    private ServerSocket serverSocket;
++    private Vector<Context> clients;
++    private ExecutorService worker;
++    private ExecutorService connector;
++
++    static class Context {
++        int port;
++        Socket socket;
++        volatile boolean run;
++
++        public Context(Socket socket) {
++            this.socket = socket;
++            port = socket.getLocalPort();
++            run = true;
++        }
++
++        public void stop() {
++            run = false;
++        }
++    }
++
++    public MockIMAPServer(int port, int maxClients) {
++        try {
++            clients = new Vector<>();
++            connector = Executors.newSingleThreadExecutor();
++            worker = Executors.newFixedThreadPool(maxClients);
++            serverSocket = new ServerSocket();
++            serverSocket.bind(new InetSocketAddress(port));
++            System.out.println(String.format("listening to %d\n", getListenPort()));
++            System.out.flush();
++        } catch (IOException e) {
++            throw new RuntimeException(e);
++        }
++    }
++
++    public int getListenPort() {
++        return serverSocket.getLocalPort();
++    }
++
++    public void start() {
++        connector.submit(new Runnable() {
++            @Override
++            public void run() {
++                while (true) {
++                    try {
++                        final Socket client = serverSocket.accept();
++                        final Context context = new Context(client);
++                        doWrite(client, "* OK IMAP4 server (MOCK) ready now");
++                        clients.add(context);
++                        worker.submit(new Runnable() {
++                            @Override
++                            public void run() {
++                                processLoop(context);
++                            }
++                        });
++                    } catch (IOException e) {
++                        throw new RuntimeException(e);
++                    }
++                }
++            }
++        });
++    }
++
++    private void doWrite(Socket socket, String contents) {
++        System.out.println(String.format("<<<<<<<< %s", contents));
++        System.out.flush();
++        try {
++            socket.getOutputStream().write(contents.getBytes());
++            if (!contents.endsWith("\r\n")) {
++                socket.getOutputStream().write("\r\n".getBytes());
++            }
++            socket.getOutputStream().flush();
++        } catch (IOException e) {
++            throw new RuntimeException(e);
++        }
++    }
++
++    private void processLoop(final Context context) {
++        final Socket clientSocket = context.socket;
++        try (BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()))) {
++            while (context.run) {
++                String request = reader.readLine();
++                if (request != null) {
++                    String response = handle(clientSocket, request);
++                    doWrite(clientSocket, response);
++                } else {
++                    // end of stream reached, client closed connection
++                    break;
++                }
++                try {
++                    Thread.sleep(50);
++                } catch (InterruptedException e) {
++                    break;
++                }
++            }
++        } catch (IOException e) {
++            throw new RuntimeException(e);
++        }
++    }
++
++    private String handle(final Socket clientSocket, String request) {
++        System.out.println(String.format(">>>>>>>> %s", request));
++        System.out.flush();
++        StringBuilder sb = new StringBuilder();
++        try (Scanner scan = new Scanner(request)) {
++            String uniq = scan.next();
++            String req = scan.nextLine().trim();
++
++            sb.append(uniq).append(" ");
++            if (req.startsWith("LOGIN")) {
++                sb.append("OK LOGIN completed");
++            } else if (req.startsWith("NOOP")) {
++                sb.append("OK NOOP completed");
++            } else if (req.startsWith("CAPABILITY")) {
++                doWrite(clientSocket, "* CAPABILITY IMAP4rev1");
++                sb.append("OK CAPABILITY completed");
++            } else if (req.startsWith("LOGOUT")) {
++                sb.append("OK LOGOUT completed");
++                int index = getClientIndexByPort(clientSocket.getLocalPort());
++                closeClientSocket(index);
++            } else if (req.startsWith("NAMESPACE")) {
++                doWrite(clientSocket, "* NAMESPACE ((\"\" \"/\")) NIL NIL");
++                sb.append("OK NAMESPACE completed");
++            } else if (req.startsWith("LIST")) {
++                if (!req.endsWith("\"\" \"\"")) {
++                    doWrite(clientSocket, "* LIST \"\" \"INBOX\"");
++                }
++                sb.append("OK LIST completed");
++            } else if (req.startsWith("EXAMINE")) {
++                doWrite(clientSocket, "* 4 Exists");
++                doWrite(clientSocket, "* OK [UNSEEN 1] First unseen message");
++                sb.append("OK [READ-ONLY] EXAMINE completed");
++            } else if (req.startsWith("SELECT")) {
++                doWrite(clientSocket, "* 4 Exists");
++                doWrite(clientSocket, "* OK [UNSEEN 1] First unseen message");
++                doWrite(clientSocket, "* OK [UIDVALIDITY 1568094579] UIDs valid");
++                sb.append("OK [READ-WRITE] SELECT completed");
++            } else if (req.startsWith("UID FETCH 1000 (UID)")) {
++                doWrite(clientSocket, "* 1 FETCH (UID 1000)");
++                sb.append("OK UID FETCH completed");
++            } else if (req.startsWith("FETCH")) {
++                if (req.endsWith("(BODYSTRUCTURE)")) {
++                    doWrite(clientSocket, "* 1 FETCH (BODYSTRUCTURE (\"text\" \"plain\" (\"charset\" \"UTF-8\" \"format\" \"flowed\" \"delsp\" \"no\") NIL NIL \"7bit\" 0 0))");
++                } else {
++                    doWrite(clientSocket,
++                        "* 4 FETCH (ENVELOPE (\"Wed, 18 Sep 2019 14:50:34 +0100\" \"C\" ((NIL NIL \"u1\" \"tls.thunder.dom\")) ((NIL NIL \"u1\" \"tls.thunder.dom\")) ((NIL NIL \"u1\" \"tls.thunder.dom\")) ((NIL NIL \"u1\" \"tls.thunder.dom\")) NIL NIL \"<86b6184.22.16d44a385fb.Webtop.23@tls.thunder.dom>\" \"<de03ac5.23.16d44a3994c.Webtop.23@tls.thunder.dom>\") INTERNALDATE \"18-Sep-2019 13:50:35 +0000\" RFC822.SIZE 994 FLAGS () BODYSTRUCTURE (\"text\" \"plain\" (\"charset\" \"UTF-8\" \"format\" \"flowed\" \"delsp\" \"no\") NIL NIL \"7bit\" 0 0) UID 1643 BODY[HEADER.FIELDS (X-PRIORITY IMPORTANCE X-WEBTOP-FORWARDED-MESSAGE-GUID X-CP-CAL-NOTIFICATION REFERENCES DISPOSITION-NOTIFICATION-TO MESSAGE-ID IN-REPLY-TO X-CP-WEBTOP-DRAFT)] {261}\n"
++                                + "Message-ID: <de03ac5.23.16d44a3994c.Webtop.23@tls.thunder.dom>\n"
++                                + "In-Reply-To: <86b6184.22.16d44a385fb.Webtop.23@tls.thunder.dom>\n"
++                                + "References: <69b4d793.21.16d44a372b2.Webtop.23@tls.thunder.dom><86b6184.22.16d44a385fb.Webtop.23@tls.thunder.dom>\n"
++                                + "X-Priority: 1\n" + "\n" + ")");
++                }
++                sb.append("OK FETCH completed");
++            } else if (req.startsWith("CLOSE")) {
++                sb.append("OK CLOSE completed");
++            }
++            return sb.toString();
++        }
++    }
++
++    private int getClientIndexByPort(int port) {
++        for (int i = 0; i < clients.size(); ++i) {
++            if (clients.get(i).port == port) {
++                return i;
++            }
++        }
++        return -1;
++    }
++
++    public void closeClientSocket(int index) {
++        if (index < 0 || index >= clients.size()) {
++            throw new IllegalArgumentException();
++        }
++        Context context = clients.remove(index);
++        try {
++            doWrite(context.socket, "* BYE IMAP4 server terminating connection");
++            context.socket.close();
++            context.stop();
++        } catch (IOException e) {
++            throw new RuntimeException(e);
++        }
++    }
++
++    public void close() {
++        try {
++            for (Context context : clients) {
++                if (context.socket != null && context.socket.isConnected()) {
++                    try {
++                        context.socket.close();
++                    } catch (IOException e) {
++                    }
++                }
++            }
++        } finally {
++            try {
++                serverSocket.close();
++            } catch (IOException e) {
++                throw new RuntimeException(e);
++            }
++            connector.shutdownNow();
++            worker.shutdownNow();
++        }
++    }
++
++    public int getClientCounts() {
++        return clients.size();
++    }
++}
+\ No newline at end of file
+-- 
+2.20.1 (Apple Git-117)
+
