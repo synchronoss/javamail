@@ -1,1 +1,10 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        maven { url snapshotRepoUrl }
+        maven { url releaseRepoUrl }
+        mavenLocal()
+    }
+}
+
 rootProject.name = "javax.mail"

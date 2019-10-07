@@ -9,6 +9,7 @@ buildscript {
 plugins {
     id "java"
     id "maven-publish"
+    id "com.synchronoss.gradle.escrow" version "0.0.2"
 }
 
 repositories {
