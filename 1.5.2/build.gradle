@@ -50,6 +50,12 @@ sourceSets.main.java.srcDirs = [
     "${buildDir}/generated-source"
 ]
 
+sourceSets.test.resources.srcDirs += [ "src/test/java" ]
+
+dependencies {
+    testCompile("junit:junit:4.11")
+}
+
 targetCompatibility = "1.7"
 sourceCompatibility = "1.7"
 
