@@ -213,6 +213,7 @@ public class MockIMAPServer {
             connector.shutdownNow();
             worker.shutdownNow();
         }
+        clients.clear();
     }
 
     public int getClientCounts() {

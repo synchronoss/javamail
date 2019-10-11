@@ -1529,11 +1529,12 @@ public class IMAPStore extends Store
         synchronized(pool) {
             retry = pool.authenticatedConnections.size();
         }
-        retry = retry == 0 ? 1 : retry;
+        boolean serverAlive = false;
         while (retry > 0) {
             try {
                 p = getStoreProtocol();
                 p.noop();
+                serverAlive = true;
                 break;
             } catch (ProtocolException pex) {
                 // will return false below
@@ -1543,6 +1544,20 @@ public class IMAPStore extends Store
             --retry;
         }
 
+        /**
+         * Now all pooled connections are tested, if serverAlive is still unknown we establish a connection to server.
+         */
+        if (!serverAlive) {
+            p = null;
+            try {
+                p = getStoreProtocol();
+                p.noop();
+            } catch (ProtocolException pex) {
+                // will return false below
+            } finally {
+                releaseStoreProtocol(p, true);
+            }
+        }
 
 	return super.isConnected();
     }
