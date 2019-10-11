@@ -43,6 +43,27 @@ public class IMAPStoreTest {
     }
 
     @Test
+    public void serverDown() {
+        server.close();
+        assertTrue(store.isConnected() == false);
+        assertTrue(server.getClientCounts() == 0);
+    }
+
+    @Test
+    public void serverDown2() throws MessagingException {
+        IMAPFolder inbox = (IMAPFolder) store.getFolder("INBOX");
+        inbox.open(Folder.READ_WRITE);
+        IMAPMessage msg = (IMAPMessage) inbox.getMessageByUID(1000);
+        assertTrue(msg != null);
+        assertEquals(true, store.isConnected());
+        assertEquals(2, server.getClientCounts());
+
+        server.close();
+        assertTrue(store.isConnected() == false);
+        assertTrue(server.getClientCounts() == 0);
+    }
+
+    @Test
     public void storeConnected() {
         assertTrue(store.isConnected());
         assertEquals(1, server.getClientCounts());
@@ -100,7 +121,7 @@ public class IMAPStoreTest {
         assertEquals(1, server.getClientCounts());
 
         assertEquals(true, store.isConnected());
-        assertEquals(1, server.getClientCounts());
+        assertEquals(2, server.getClientCounts());
         assertTrue(msg.getContent() != null);
     }
 }
