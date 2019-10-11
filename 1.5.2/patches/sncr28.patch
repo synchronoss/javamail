@@ -1,0 +1,107 @@
+From be90ca5a2571a03b3ea358643792c5fa82ce76a8 Mon Sep 17 00:00:00 2001
+From: Thunder Liu <thunder.liu@synchronoss.com>
+Date: Fri, 11 Oct 2019 11:55:33 +0100
+Subject: [PATCH] MERCURY-2083 A MERCURY-2007 BUG When IMAP Server Is Down
+ IMAPStore.isConnected Returns True
+
+---
+ .../java/com/sun/mail/imap/IMAPStore.java     | 17 +++++++++++++-
+ .../java/com/sun/mail/imap/IMAPStoreTest.java | 23 ++++++++++++++++++-
+ .../com/sun/mail/imap/MockIMAPServer.java     |  1 +
+ 3 files changed, 39 insertions(+), 2 deletions(-)
+
+diff --git a/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java b/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
+index 00f5230..c106aa0 100644
+--- a/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
++++ b/1.5.2/src/main/java/com/sun/mail/imap/IMAPStore.java
+@@ -1529,11 +1529,12 @@ public class IMAPStore extends Store
+         synchronized(pool) {
+             retry = pool.authenticatedConnections.size();
+         }
+-        retry = retry == 0 ? 1 : retry;
++        boolean serverAlive = false;
+         while (retry > 0) {
+             try {
+                 p = getStoreProtocol();
+                 p.noop();
++                serverAlive = true;
+                 break;
+             } catch (ProtocolException pex) {
+                 // will return false below
+@@ -1543,6 +1544,20 @@ public class IMAPStore extends Store
+             --retry;
+         }
+ 
++        /**
++         * Now all pooled connections are tested, if serverAlive is still unknown we establish a connection to server.
++         */
++        if (!serverAlive) {
++            p = null;
++            try {
++                p = getStoreProtocol();
++                p.noop();
++            } catch (ProtocolException pex) {
++                // will return false below
++            } finally {
++                releaseStoreProtocol(p, true);
++            }
++        }
+ 
+ 	return super.isConnected();
+     }
+diff --git a/1.5.2/src/test/java/com/sun/mail/imap/IMAPStoreTest.java b/1.5.2/src/test/java/com/sun/mail/imap/IMAPStoreTest.java
+index e1a410f..d02709a 100644
+--- a/1.5.2/src/test/java/com/sun/mail/imap/IMAPStoreTest.java
++++ b/1.5.2/src/test/java/com/sun/mail/imap/IMAPStoreTest.java
+@@ -42,6 +42,27 @@ public class IMAPStoreTest {
+         server.close();
+     }
+ 
++    @Test
++    public void serverDown() {
++        server.close();
++        assertTrue(store.isConnected() == false);
++        assertTrue(server.getClientCounts() == 0);
++    }
++
++    @Test
++    public void serverDown2() throws MessagingException {
++        IMAPFolder inbox = (IMAPFolder) store.getFolder("INBOX");
++        inbox.open(Folder.READ_WRITE);
++        IMAPMessage msg = (IMAPMessage) inbox.getMessageByUID(1000);
++        assertTrue(msg != null);
++        assertEquals(true, store.isConnected());
++        assertEquals(2, server.getClientCounts());
++
++        server.close();
++        assertTrue(store.isConnected() == false);
++        assertTrue(server.getClientCounts() == 0);
++    }
++
+     @Test
+     public void storeConnected() {
+         assertTrue(store.isConnected());
+@@ -100,7 +121,7 @@ public class IMAPStoreTest {
+         assertEquals(1, server.getClientCounts());
+ 
+         assertEquals(true, store.isConnected());
+-        assertEquals(1, server.getClientCounts());
++        assertEquals(2, server.getClientCounts());
+         assertTrue(msg.getContent() != null);
+     }
+ }
+diff --git a/1.5.2/src/test/java/com/sun/mail/imap/MockIMAPServer.java b/1.5.2/src/test/java/com/sun/mail/imap/MockIMAPServer.java
+index eaeb219..ea427a8 100644
+--- a/1.5.2/src/test/java/com/sun/mail/imap/MockIMAPServer.java
++++ b/1.5.2/src/test/java/com/sun/mail/imap/MockIMAPServer.java
+@@ -213,6 +213,7 @@ public class MockIMAPServer {
+             connector.shutdownNow();
+             worker.shutdownNow();
+         }
++        clients.clear();
+     }
+ 
+     public int getClientCounts() {
+-- 
+2.20.1 (Apple Git-117)
+
