@@ -40,10 +40,18 @@
 
 package com.sun.mail.imap.protocol;
 
-import java.io.*;
-import java.util.*;
-import com.sun.mail.util.*;
-import com.sun.mail.iap.*;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.sun.mail.iap.ByteArray;
+import com.sun.mail.iap.ParsingException;
+import com.sun.mail.iap.Protocol;
+import com.sun.mail.iap.ProtocolException;
+import com.sun.mail.iap.Response;
+import com.sun.mail.util.ASCIIUtility;
 
 /**
  * This class represents a FETCH response obtained from the input stream
@@ -68,7 +76,7 @@ public class FetchResponse extends IMAPResponse {
     private Map extensionItems;
     private final FetchItem[] fitems;
 
-    public FetchResponse(Protocol p) 
+    public FetchResponse(Protocol p)
 		throws IOException, ProtocolException {
 	super(p);
 	fitems = null;
@@ -259,7 +267,7 @@ public class FetchResponse extends IMAPResponse {
 	    if (match(MODSEQ.name))
 		return new MODSEQ(this);
 	    break;
-	default: 
+	default:
 	    break;
 	}
 	return null;
@@ -368,6 +376,7 @@ public class FetchResponse extends IMAPResponse {
                 }
                 else {
                     s = FLState.QUOTE1;
+                    index--;//re-check double quote
                 }
                 break;
             case QUOTE1:
