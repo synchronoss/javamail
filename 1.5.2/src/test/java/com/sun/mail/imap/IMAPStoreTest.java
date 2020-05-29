@@ -21,7 +21,9 @@ public class IMAPStoreTest {
 
     @Before
     public void setUp() throws MessagingException {
-        final int port = 143;
+        // first 1024 ports are restricted to root access only on Linux
+
+        final int port = 1143;
         server = new MockIMAPServer(port, 20);
         server.start();
 
@@ -33,7 +35,6 @@ public class IMAPStoreTest {
         Session session = Session.getInstance(props);
         store = (IMAPStore) session.getStore("imap");
         store.connect(host, port, username, password);
-
     }
 
     @After
